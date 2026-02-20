@@ -1,4 +1,5 @@
-import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle } from "lucide-react";
+import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download } from "lucide-react";
+import { generateLegalPdf } from "@/lib/generatePdf";
 
 interface LegalResultProps {
   summary: string;
@@ -52,8 +53,23 @@ const SectionCard = ({
 };
 
 export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft }: LegalResultProps) => {
+  const handleDownload = () => {
+    generateLegalPdf({ summary, legalBasis, analysis, nextSteps, draft });
+  };
+
   return (
     <div className="space-y-4 mt-6">
+      {/* Download Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleDownload}
+          className="flex items-center gap-2 gradient-gold text-navy font-bold rounded-xl px-5 py-2.5 shadow-gold hover:opacity-90 transition-all duration-200 text-sm"
+        >
+          <Download className="w-4 h-4" />
+          دانلود PDF
+        </button>
+      </div>
+
       {/* Summary */}
       <SectionCard icon={<Scale className="w-4 h-4" />} title="خلاصه پرونده" accentColor="navy" delay={0}>
         <p className="text-foreground leading-relaxed text-sm">{summary}</p>
