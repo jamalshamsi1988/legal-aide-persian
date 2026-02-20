@@ -1,0 +1,4 @@
+project_id = "bwootzhnhbtfsgiohnya"
+
+[functions.legal-ai]
+verify_jwt = false
