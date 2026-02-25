@@ -3,6 +3,7 @@ import { Send, Loader2, RotateCcw, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { LegalResult } from "./LegalResult";
+import { FileUploadZone, type UploadedFile } from "./FileUploadZone";
 
 interface LegalAnalysis {
   summary: string;
@@ -18,9 +19,33 @@ const EXAMPLE_QUESTIONS = [
   "در تصادف رانندگی طرف مقابل مقصر بود اما از پرداخت خسارت امتناع می‌کند.",
 ];
 
-const analyzeLegalQuestion = async (question: string): Promise<LegalAnalysis> => {
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(",")[1]); // strip data:...;base64, prefix
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+const analyzeLegalQuestion = async (
+  question: string,
+  uploadedFiles: UploadedFile[]
+): Promise<LegalAnalysis> => {
+  // Convert files to base64
+  const files = await Promise.all(
+    uploadedFiles.map(async (uf) => ({
+      type: uf.type,
+      mimeType: uf.file.type,
+      name: uf.file.name,
+      data: await fileToBase64(uf.file),
+    }))
+  );
+
   const { data, error } = await supabase.functions.invoke("legal-ai", {
-    body: { question },
+    body: { question, files: files.length > 0 ? files : undefined },
   });
 
   if (error) {
@@ -45,6 +70,7 @@ export const LegalAssistant = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<LegalAnalysis | null>(null);
   const [error, setError] = useState("");
+  const [files, setFiles] = useState<UploadedFile[]>([]);
 
   const handleSubmit = async () => {
     if (!question.trim() || question.trim().length < 15) {
@@ -55,7 +81,7 @@ export const LegalAssistant = () => {
     setLoading(true);
     setResult(null);
     try {
-      const analysis = await analyzeLegalQuestion(question);
+      const analysis = await analyzeLegalQuestion(question, files);
       setResult(analysis);
     } catch (err) {
       const message = err instanceof Error ? err.message : "خطایی در پردازش سوال شما رخ داد.";
@@ -70,6 +96,8 @@ export const LegalAssistant = () => {
     setQuestion("");
     setResult(null);
     setError("");
+    files.forEach((f) => f.preview && URL.revokeObjectURL(f.preview));
+    setFiles([]);
   };
 
   const handleExample = (ex: string) => {
@@ -88,7 +116,7 @@ export const LegalAssistant = () => {
             سوال حقوقی خود را مطرح کنید
           </h2>
           <p className="text-primary-foreground/60 text-xs mt-1">
-            هر چه کامل‌تر توضیح دهید، تحلیل دقیق‌تر خواهد بود.
+            هر چه کامل‌تر توضیح دهید، تحلیل دقیق‌تر خواهد بود. می‌توانید مدارک مرتبط را نیز بارگذاری کنید.
           </p>
         </div>
 
@@ -131,6 +159,14 @@ export const LegalAssistant = () => {
             </div>
           </div>
 
+          {/* File Upload */}
+          <FileUploadZone
+            files={files}
+            onFilesChange={setFiles}
+            disabled={loading}
+            maxFiles={50}
+          />
+
           {/* Action buttons */}
           <div className="flex gap-3">
             <button
@@ -147,10 +183,11 @@ export const LegalAssistant = () => {
                 <>
                   <Send className="w-4 h-4" />
                   تحلیل حقوقی
+                  {files.length > 0 && ` (${files.length} فایل)`}
                 </>
               )}
             </button>
-            {(result || question) && (
+            {(result || question || files.length > 0) && (
               <button
                 onClick={handleReset}
                 className="flex items-center gap-2 bg-secondary text-navy border border-border rounded-xl px-4 py-3 text-sm hover:bg-muted transition-colors duration-200"

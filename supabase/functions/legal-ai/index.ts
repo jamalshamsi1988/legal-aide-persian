@@ -8,7 +8,9 @@ const corsHeaders = {
 
 const SYSTEM_PROMPT = `شما یک دستیار حقوقی حرفه‌ای در حوزه حقوق ایران هستید.
 
-بر اساس سوال کاربر، پاسخ خود را دقیقاً به فرمت JSON زیر بدهید و هیچ متن اضافی خارج از JSON ننویسید:
+کاربر ممکن است علاوه بر سوال متنی، تصاویر یا اسناد PDF نیز ارسال کند. این فایل‌ها می‌توانند شامل قراردادها، احکام دادگاه، نامه‌های رسمی، مدارک هویتی، یا هر سند حقوقی دیگری باشند. آن‌ها را با دقت بررسی و در تحلیل خود لحاظ کنید.
+
+بر اساس سوال و مدارک کاربر، پاسخ خود را دقیقاً به فرمت JSON زیر بدهید و هیچ متن اضافی خارج از JSON ننویسید:
 
 {
   "summary": "خلاصه پرونده در ۲-۳ جمله",
@@ -22,6 +24,7 @@ const SYSTEM_PROMPT = `شما یک دستیار حقوقی حرفه‌ای در 
 - متن باید رسمی، مستند، دقیق و بدون حدس غیرحقوقی باشد.
 - از استناد غیرواقعی خودداری کن. فقط مواد قانونی واقعی ایران را ذکر کن.
 - اگر اطلاعات ناقص است، در summary بنویس که اطلاعات بیشتری لازم است و در nextSteps سوالات تکمیلی بپرس.
+- اگر تصاویر یا اسناد ارسال شده، آن‌ها را دقیقاً بررسی و محتوای آن‌ها را در تحلیل ذکر کن.
 - پاسخ باید فقط JSON معتبر باشد، بدون markdown، بدون بلوک کد.`;
 
 serve(async (req) => {
@@ -30,7 +33,7 @@ serve(async (req) => {
   }
 
   try {
-    const { question } = await req.json();
+    const { question, files } = await req.json();
 
     if (!question || question.trim().length < 15) {
       return new Response(
@@ -44,6 +47,30 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Build multimodal content array
+    const userContent: any[] = [{ type: "text", text: question }];
+
+    if (files && Array.isArray(files)) {
+      for (const file of files) {
+        if (file.type === "image" && file.data) {
+          userContent.push({
+            type: "image_url",
+            image_url: {
+              url: `data:${file.mimeType};base64,${file.data}`,
+            },
+          });
+        } else if (file.type === "pdf" && file.data) {
+          // For PDFs, send as image_url with PDF mime type (supported by Gemini)
+          userContent.push({
+            type: "image_url",
+            image_url: {
+              url: `data:${file.mimeType};base64,${file.data}`,
+            },
+          });
+        }
+      }
+    }
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -51,10 +78,10 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: question },
+          { role: "user", content: userContent },
         ],
         temperature: 0.3,
       }),
@@ -85,15 +112,12 @@ serve(async (req) => {
       throw new Error("No content in AI response");
     }
 
-    // Parse the JSON response from AI
     let parsed;
     try {
-      // Remove potential markdown code block wrappers
       const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       parsed = JSON.parse(cleaned);
     } catch {
       console.error("Failed to parse AI response as JSON:", content);
-      // Return a structured fallback
       parsed = {
         summary: content.substring(0, 200),
         legalBasis: ["پاسخ AI قابل تحلیل ساختاری نبود. لطفاً دوباره تلاش کنید."],
