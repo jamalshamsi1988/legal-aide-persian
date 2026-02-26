@@ -1,8 +1,11 @@
-const CACHE_NAME = 'legal-aide-v1';
+const CACHE_NAME = 'legal-aide-v2';
 const STATIC_ASSETS = [
   '/',
   '/logo.webp',
-  '/manifest.json'
+  '/icon-192.png',
+  '/icon-512.png',
+  '/manifest.json',
+  '/offline.html'
 ];
 
 self.addEventListener('install', (event) => {
@@ -23,6 +26,12 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/offline.html'))
+    );
+    return;
+  }
   event.respondWith(
     fetch(event.request)
       .then((response) => {
