@@ -32,9 +32,9 @@ const fileToBase64 = (file: File): Promise<string> =>
 
 const analyzeLegalQuestion = async (
   question: string,
-  uploadedFiles: UploadedFile[]
+  uploadedFiles: UploadedFile[],
+  detailed: boolean = false
 ): Promise<LegalAnalysis> => {
-  // Convert files to base64
   const files = await Promise.all(
     uploadedFiles.map(async (uf) => ({
       type: uf.type,
@@ -45,7 +45,7 @@ const analyzeLegalQuestion = async (
   );
 
   const { data, error } = await supabase.functions.invoke("legal-ai", {
-    body: { question, files: files.length > 0 ? files : undefined },
+    body: { question, files: files.length > 0 ? files : undefined, detailed },
   });
 
   if (error) {
