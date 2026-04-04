@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Send, Loader2, RotateCcw, HelpCircle } from "lucide-react";
+import { Send, Loader2, RotateCcw, HelpCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { LegalResult } from "./LegalResult";
