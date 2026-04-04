@@ -168,34 +168,53 @@ export const LegalAssistant = () => {
           />
 
           {/* Action buttons */}
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleSubmit(false)}
+                disabled={loading || !question.trim()}
+                className="flex-1 flex items-center justify-center gap-2 gradient-gold text-navy font-bold rounded-xl px-5 py-3 shadow-gold hover:opacity-90 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    در حال تحلیل...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    تحلیل حقوقی
+                    {files.length > 0 && ` (${files.length} فایل)`}
+                  </>
+                )}
+              </button>
+              {(result || question || files.length > 0) && (
+                <button
+                  onClick={handleReset}
+                  className="flex items-center gap-2 bg-secondary text-navy border border-border rounded-xl px-4 py-3 text-sm hover:bg-muted transition-colors duration-200"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  پاک کردن
+                </button>
+              )}
+            </div>
             <button
-              onClick={handleSubmit}
+              onClick={() => handleSubmit(true)}
               disabled={loading || !question.trim()}
-              className="flex-1 flex items-center justify-center gap-2 gradient-gold text-navy font-bold rounded-xl px-5 py-3 shadow-gold hover:opacity-90 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+              className="w-full flex items-center justify-center gap-2 bg-navy text-primary-foreground font-bold rounded-xl px-5 py-3 hover:bg-navy/90 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed text-sm border-2 border-gold/30"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  در حال تحلیل...
+                  در حال تحلیل ویژه...
                 </>
               ) : (
                 <>
-                  <Send className="w-4 h-4" />
-                  تحلیل حقوقی
-                  {files.length > 0 && ` (${files.length} فایل)`}
+                  <FileText className="w-4 h-4 text-gold" />
+                  تحلیل ویژه — لایحه و شکایت مفصل (۲۰۰۰-۳۰۰۰ کلمه)
                 </>
               )}
             </button>
-            {(result || question || files.length > 0) && (
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-2 bg-secondary text-navy border border-border rounded-xl px-4 py-3 text-sm hover:bg-muted transition-colors duration-200"
-              >
-                <RotateCcw className="w-4 h-4" />
-                پاک کردن
-              </button>
-            )}
           </div>
         </div>
       </div>
