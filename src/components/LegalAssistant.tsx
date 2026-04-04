@@ -72,7 +72,7 @@ export const LegalAssistant = () => {
   const [error, setError] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (detailed: boolean = false) => {
     if (!question.trim() || question.trim().length < 15) {
       setError("لطفاً سوال حقوقی خود را به طور کامل بنویسید (حداقل ۱۵ کاراکتر).");
       return;
@@ -81,7 +81,7 @@ export const LegalAssistant = () => {
     setLoading(true);
     setResult(null);
     try {
-      const analysis = await analyzeLegalQuestion(question, files);
+      const analysis = await analyzeLegalQuestion(question, files, detailed);
       setResult(analysis);
     } catch (err) {
       const message = err instanceof Error ? err.message : "خطایی در پردازش سوال شما رخ داد.";
