@@ -33,7 +33,7 @@ serve(async (req) => {
   }
 
   try {
-    const { question, files } = await req.json();
+    const { question, files, detailed } = await req.json();
 
     if (!question || question.trim().length < 15) {
       return new Response(
