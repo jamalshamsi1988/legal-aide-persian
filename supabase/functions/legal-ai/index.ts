@@ -51,9 +51,9 @@ serve(async (req) => {
       );
     }
 
-    const GAPGPT_API_KEY = Deno.env.get("GAPGPT_API_KEY");
-    if (!GAPGPT_API_KEY) {
-      throw new Error("GAPGPT_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
     // Build multimodal content array
@@ -80,20 +80,18 @@ serve(async (req) => {
       }
     }
 
-    const response = await fetch("https://api.gapgpt.app/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GAPGPT_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: detailed ? BASE_SYSTEM_PROMPT + DETAILED_EXTRA : BASE_SYSTEM_PROMPT },
           { role: "user", content: userContent },
         ],
-        temperature: detailed ? 0.4 : 0.3,
-        max_tokens: detailed ? 8000 : 4000,
       }),
     });
 
