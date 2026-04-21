@@ -87,7 +87,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: detailed ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: detailed ? BASE_SYSTEM_PROMPT + DETAILED_EXTRA : BASE_SYSTEM_PROMPT },
           { role: "user", content: userContent },
