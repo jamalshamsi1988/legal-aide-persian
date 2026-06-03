@@ -11,6 +11,7 @@ interface LegalAnalysis {
   analysis: string;
   nextSteps: string[];
   draft: string | null;
+  sources?: LegalSource[];
 }
 
 const EXAMPLE_QUESTIONS = [
