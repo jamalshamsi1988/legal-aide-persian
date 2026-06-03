@@ -34,7 +34,8 @@ const fileToBase64 = (file: File): Promise<string> =>
 const analyzeLegalQuestion = async (
   question: string,
   uploadedFiles: UploadedFile[],
-  detailed: boolean = false
+  detailed: boolean = false,
+  workspaceSlug?: string,
 ): Promise<LegalAnalysis> => {
   const files = await Promise.all(
     uploadedFiles.map(async (uf) => ({
@@ -46,7 +47,12 @@ const analyzeLegalQuestion = async (
   );
 
   const { data, error } = await supabase.functions.invoke("legal-ai", {
-    body: { question, files: files.length > 0 ? files : undefined, detailed },
+    body: {
+      question,
+      files: files.length > 0 ? files : undefined,
+      detailed,
+      workspace_slug: workspaceSlug,
+    },
   });
 
   if (error) {
@@ -63,10 +69,16 @@ const analyzeLegalQuestion = async (
     analysis: data.analysis || "",
     nextSteps: data.nextSteps || [],
     draft: data.draft || null,
+    sources: data.sources || [],
   };
 };
 
-export const LegalAssistant = () => {
+interface LegalAssistantProps {
+  workspaceSlug?: string;
+  workspaceName?: string;
+}
+
+export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantProps = {}) => {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<LegalAnalysis | null>(null);
