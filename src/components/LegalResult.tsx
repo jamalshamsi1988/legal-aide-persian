@@ -1,5 +1,12 @@
-import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download } from "lucide-react";
+import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download, Library } from "lucide-react";
 import { generateLegalPdf } from "@/lib/generatePdf";
+
+export interface LegalSource {
+  title: string;
+  source_type: string;
+  excerpt: string;
+  similarity: number;
+}
 
 interface LegalResultProps {
   summary: string;
@@ -7,6 +14,7 @@ interface LegalResultProps {
   analysis: string;
   nextSteps: string[];
   draft: string | null;
+  sources?: LegalSource[];
 }
 
 const SectionCard = ({
@@ -52,7 +60,7 @@ const SectionCard = ({
   );
 };
 
-export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft }: LegalResultProps) => {
+export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, sources }: LegalResultProps) => {
   const handleDownload = () => {
     generateLegalPdf({ summary, legalBasis, analysis, nextSteps, draft });
   };
@@ -116,6 +124,25 @@ export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft }:
             <AlertCircle className="w-3 h-3" />
             این پیش‌نویس جنبه آموزشی دارد. پیش از ارائه به دادگاه، با وکیل مشورت کنید.
           </p>
+        </SectionCard>
+      )}
+
+      {/* Cited Sources from corpus */}
+      {sources && sources.length > 0 && (
+        <SectionCard icon={<Library className="w-4 h-4" />} title="منابع استنادی از پایگاه دانش" accentColor="gold" delay={500}>
+          <ul className="space-y-3">
+            {sources.map((s, i) => (
+              <li key={i} className="bg-white/60 rounded-lg p-3 border border-gold/20">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-navy font-bold text-xs">{s.title}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {s.source_type} • شباهت {Math.round(s.similarity * 100)}%
+                  </span>
+                </div>
+                <p className="text-xs text-foreground/80 leading-relaxed line-clamp-3">{s.excerpt}…</p>
+              </li>
+            ))}
+          </ul>
         </SectionCard>
       )}
     </div>

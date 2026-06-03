@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Send, Loader2, RotateCcw, HelpCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { LegalResult } from "./LegalResult";
+import { LegalResult, type LegalSource } from "./LegalResult";
 import { FileUploadZone, type UploadedFile } from "./FileUploadZone";
 
 interface LegalAnalysis {
@@ -11,6 +11,7 @@ interface LegalAnalysis {
   analysis: string;
   nextSteps: string[];
   draft: string | null;
+  sources?: LegalSource[];
 }
 
 const EXAMPLE_QUESTIONS = [
@@ -33,7 +34,8 @@ const fileToBase64 = (file: File): Promise<string> =>
 const analyzeLegalQuestion = async (
   question: string,
   uploadedFiles: UploadedFile[],
-  detailed: boolean = false
+  detailed: boolean = false,
+  workspaceSlug?: string,
 ): Promise<LegalAnalysis> => {
   const files = await Promise.all(
     uploadedFiles.map(async (uf) => ({
@@ -45,7 +47,12 @@ const analyzeLegalQuestion = async (
   );
 
   const { data, error } = await supabase.functions.invoke("legal-ai", {
-    body: { question, files: files.length > 0 ? files : undefined, detailed },
+    body: {
+      question,
+      files: files.length > 0 ? files : undefined,
+      detailed,
+      workspace_slug: workspaceSlug,
+    },
   });
 
   if (error) {
@@ -62,10 +69,16 @@ const analyzeLegalQuestion = async (
     analysis: data.analysis || "",
     nextSteps: data.nextSteps || [],
     draft: data.draft || null,
+    sources: data.sources || [],
   };
 };
 
-export const LegalAssistant = () => {
+interface LegalAssistantProps {
+  workspaceSlug?: string;
+  workspaceName?: string;
+}
+
+export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantProps = {}) => {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<LegalAnalysis | null>(null);
@@ -81,7 +94,7 @@ export const LegalAssistant = () => {
     setLoading(true);
     setResult(null);
     try {
-      const analysis = await analyzeLegalQuestion(question, files, detailed);
+      const analysis = await analyzeLegalQuestion(question, files, detailed, workspaceSlug);
       setResult(analysis);
     } catch (err) {
       const message = err instanceof Error ? err.message : "خطایی در پردازش سوال شما رخ داد.";
@@ -246,6 +259,7 @@ export const LegalAssistant = () => {
           analysis={result.analysis}
           nextSteps={result.nextSteps}
           draft={result.draft}
+          sources={result.sources}
         />
       )}
 
