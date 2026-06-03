@@ -94,7 +94,7 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
     setLoading(true);
     setResult(null);
     try {
-      const analysis = await analyzeLegalQuestion(question, files, detailed);
+      const analysis = await analyzeLegalQuestion(question, files, detailed, workspaceSlug);
       setResult(analysis);
     } catch (err) {
       const message = err instanceof Error ? err.message : "خطایی در پردازش سوال شما رخ داد.";
