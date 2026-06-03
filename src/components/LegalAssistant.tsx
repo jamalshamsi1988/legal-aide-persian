@@ -259,6 +259,7 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
           analysis={result.analysis}
           nextSteps={result.nextSteps}
           draft={result.draft}
+          sources={result.sources}
         />
       )}
 
