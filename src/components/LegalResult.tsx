@@ -1,5 +1,12 @@
-import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download } from "lucide-react";
+import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download, Library } from "lucide-react";
 import { generateLegalPdf } from "@/lib/generatePdf";
+
+export interface LegalSource {
+  title: string;
+  source_type: string;
+  excerpt: string;
+  similarity: number;
+}
 
 interface LegalResultProps {
   summary: string;
@@ -7,6 +14,7 @@ interface LegalResultProps {
   analysis: string;
   nextSteps: string[];
   draft: string | null;
+  sources?: LegalSource[];
 }
 
 const SectionCard = ({
