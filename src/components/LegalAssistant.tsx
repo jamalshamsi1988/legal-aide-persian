@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Send, Loader2, RotateCcw, HelpCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { LegalResult } from "./LegalResult";
+import { LegalResult, type LegalSource } from "./LegalResult";
 import { FileUploadZone, type UploadedFile } from "./FileUploadZone";
 
 interface LegalAnalysis {
