@@ -71,13 +71,41 @@ const SectionCard = ({
   );
 };
 
-export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, sources }: LegalResultProps) => {
+export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, sources, routing, blocked, block_reason }: LegalResultProps) => {
   const handleDownload = () => {
     generateLegalPdf({ summary, legalBasis, analysis, nextSteps, draft });
   };
 
   return (
     <div className="space-y-4 mt-6">
+      {/* Compliance block notice */}
+      {blocked && (
+        <div className="rounded-xl border border-destructive bg-red-50 p-4 flex items-start gap-3 animate-fade-in">
+          <ShieldAlert className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-destructive">
+            <p className="font-bold mb-1">پاسخ مسدود شد</p>
+            <p>این درخواست با خطوط قرمز قانونی تطبیق داشت{block_reason ? ` (${block_reason})` : ""} و قابل پاسخ‌گویی نیست.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Routing hint — workspace mismatch */}
+      {routing && (
+        <div className="rounded-xl border border-gold bg-gold-pale p-4 flex items-start gap-3 animate-fade-in">
+          <Compass className="w-5 h-5 text-navy flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-navy flex-1">
+            <p className="font-bold mb-1">پیشنهاد هدایت تخصصی</p>
+            <p className="mb-2">{routing.reason || "این سوال احتمالاً به فضای کاری دیگری مرتبط است."}</p>
+            <Link
+              to={`/workspace/${routing.suggested_slug}`}
+              className="inline-flex items-center gap-1 text-gold font-bold hover:underline"
+            >
+              انتقال به «{routing.suggested_name}» ←
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Download Button */}
       <div className="flex justify-end">
         <button
