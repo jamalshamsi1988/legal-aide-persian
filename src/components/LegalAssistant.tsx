@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Send, Loader2, RotateCcw, HelpCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { LegalResult, type LegalSource } from "./LegalResult";
+import { LegalResult, type LegalSource, type RoutingHint } from "./LegalResult";
 import { FileUploadZone, type UploadedFile } from "./FileUploadZone";
 
 interface LegalAnalysis {
@@ -12,6 +12,9 @@ interface LegalAnalysis {
   nextSteps: string[];
   draft: string | null;
   sources?: LegalSource[];
+  routing?: RoutingHint;
+  blocked?: boolean;
+  block_reason?: string;
 }
 
 const EXAMPLE_QUESTIONS = [
@@ -70,6 +73,9 @@ const analyzeLegalQuestion = async (
     nextSteps: data.nextSteps || [],
     draft: data.draft || null,
     sources: data.sources || [],
+    routing: data.routing,
+    blocked: data.blocked,
+    block_reason: data.block_reason,
   };
 };
 
@@ -260,6 +266,9 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
           nextSteps={result.nextSteps}
           draft={result.draft}
           sources={result.sources}
+          routing={result.routing}
+          blocked={result.blocked}
+          block_reason={result.block_reason}
         />
       )}
 

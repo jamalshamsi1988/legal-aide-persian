@@ -9,6 +9,40 @@ const corsHeaders = {
 
 const EMBEDDING_MODEL = "google/gemini-embedding-001";
 const EMBEDDING_DIMS = 1536;
+const ROUTER_MODEL = "google/gemini-2.5-flash-lite";
+
+// ============================================================
+// لایه ۳ — Guardrail Engine
+// (الف) Compliance Filter — خطوط قرمز قانونی
+// (ب) Context-Aware Router — تشخیص حوزه و پیشنهاد فضای کاری
+// (ج) Chain-of-Thought — استدلال گام‌به‌گام در system prompt
+// ============================================================
+
+const RED_LINE_PATTERNS: { pattern: RegExp; label: string }[] = [
+  { pattern: /(ساخت|آموزش|نحوه[‌ ]ساخت|دستور[‌ ]ساخت).{0,30}(بمب|مواد منفجره|سلاح|گاز سمی|سم کشنده)/i, label: "ساخت سلاح/مواد منفجره" },
+  { pattern: /(تولید|پخت|سنتز|آموزش[‌ ]تولید).{0,30}(شیشه|متامفتامین|هروئین|کوکائین|تریاک)/i, label: "تولید مواد مخدر" },
+  { pattern: /(کودک[‌ ]آزار|محتوای جنسی.{0,15}کودک|csam)/i, label: "محتوای کودک‌آزاری" },
+  { pattern: /(چگونه|آموزش|راه).{0,20}(قتل|ترور|کشتن).{0,30}(کسی|شخص|فرد|انسان)/i, label: "آموزش قتل/ترور" },
+  { pattern: /(هک|نفوذ به|دور زدن).{0,30}(بانک|سامانه دولتی|سپاه|وزارت|نیروی انتظامی)/i, label: "نفوذ به سامانه‌های حاکمیتی" },
+];
+
+function checkCompliance(text: string): { blocked: boolean; reason?: string } {
+  for (const { pattern, label } of RED_LINE_PATTERNS) {
+    if (pattern.test(text)) return { blocked: true, reason: label };
+  }
+  return { blocked: false };
+}
+
+const COT_BLOCK = `
+
+روش استدلال (Chain-of-Thought) که باید پیش از تولید پاسخ نهایی به‌صورت ذهنی اجرا کنی (نتیجه را در JSON بیاور، نه مراحل خام را):
+۱. شناسایی مسئله حقوقی محوری و طرفین (خواهان/خوانده، شاکی/متشاکی).
+۲. استخراج مواد قانونی مرتبط — اولویت مطلق با «منابع رسمی استنادی» اگر ارائه شده؛ سپس قوانین مدون ایران.
+۳. بررسی تعارضات احتمالی (تعارض مواد، نسخ ضمنی، تخصیص، رویه قضایی متفاوت). اگر تعارض هست در analysis توضیح بده.
+۴. اعمال قاعده بر فاکت‌ها و نتیجه‌گیری حقوقی (subsumption).
+۵. تعیین اقدام عملی بعدی و در صورت نیاز، تنظیم پیش‌نویس لایحه.
+
+هرگز ماده‌ای را که نمی‌شناسی یا در منابع نیست از خود اختراع نکن. اگر مطمئن نیستی، صریحاً در analysis بگو که نیاز به بررسی منبع تخصصی است.`;
 
 const BASE_SYSTEM_PROMPT = `شما یک دستیار حقوقی حرفه‌ای در حوزه حقوق ایران هستید.
 
@@ -30,7 +64,8 @@ const BASE_SYSTEM_PROMPT = `شما یک دستیار حقوقی حرفه‌ای 
 - اگر «منابع رسمی استنادی» در پایین سیستم‌پرامپت ارائه شد، اولویت اول استناد به همان متون باشد.
 - اگر اطلاعات ناقص است، در summary بنویس که اطلاعات بیشتری لازم است و در nextSteps سوالات تکمیلی بپرس.
 - اگر تصاویر یا اسناد ارسال شده، آن‌ها را دقیقاً بررسی و محتوای آن‌ها را در تحلیل ذکر کن.
-- پاسخ باید فقط JSON معتبر باشد، بدون markdown، بدون بلوک کد.`;
+- پاسخ باید فقط JSON معتبر باشد، بدون markdown، بدون بلوک کد.`
+  + COT_BLOCK;
 
 const DETAILED_EXTRA = `
 
@@ -72,6 +107,53 @@ async function retrieveContext(workspaceSlug: string, query: string, apiKey: str
   }
 }
 
+// Context-Aware Router: classify question into best workspace slug
+async function routeWorkspace(
+  question: string,
+  workspaces: { slug: string; name_fa: string; description: string | null }[],
+  apiKey: string,
+): Promise<{ best_slug: string | null; confidence: number; reason: string }> {
+  if (workspaces.length === 0) return { best_slug: null, confidence: 0, reason: "" };
+  const list = workspaces.map((w) => `- ${w.slug}: ${w.name_fa}${w.description ? ` — ${w.description}` : ""}`).join("\n");
+  const sys = `تو یک طبقه‌بند حوزه حقوقی هستی. بر اساس سوال کاربر، مناسب‌ترین فضای کاری را از فهرست زیر انتخاب کن. فقط JSON معتبر برگردان.
+
+فهرست فضاهای کاری:
+${list}
+
+پاسخ دقیقاً به این فرمت:
+{"best_slug":"<slug>","confidence":<0..1>,"reason":"<توضیح کوتاه فارسی>"}`;
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: ROUTER_MODEL,
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: question.slice(0, 1500) },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!r.ok) {
+      console.warn("router classify failed", r.status);
+      return { best_slug: null, confidence: 0, reason: "" };
+    }
+    const j = await r.json();
+    const txt = j.choices?.[0]?.message?.content || "{}";
+    const cleaned = txt.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+    return {
+      best_slug: typeof parsed.best_slug === "string" ? parsed.best_slug : null,
+      confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0,
+      reason: typeof parsed.reason === "string" ? parsed.reason : "",
+    };
+  } catch (e) {
+    console.warn("routeWorkspace error", e);
+    return { best_slug: null, confidence: 0, reason: "" };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -85,10 +167,55 @@ serve(async (req) => {
       );
     }
 
+    // ── (الف) Compliance Filter ──────────────────────────────
+    const compliance = checkCompliance(question);
+    if (compliance.blocked) {
+      return new Response(
+        JSON.stringify({
+          summary: "این درخواست خارج از چارچوب مجاز خدمت حقوقی است.",
+          legalBasis: [],
+          analysis:
+            `درخواست شما با خطوط قرمز قانونی (${compliance.reason}) تطبیق داده شد و قابل پاسخ‌گویی نیست. در صورت داشتن سوال حقوقی مشروع در همین حوزه، لطفاً صورت‌مسئله را با ادبیات قانونی بازنویسی کنید.`,
+          nextSteps: ["بازنویسی سوال در چارچوب قانونی", "مشاوره با وکیل دارای پروانه"],
+          draft: null,
+          sources: [],
+          blocked: true,
+          block_reason: compliance.reason,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const sbAdmin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // ── (ب) Context-Aware Router ─────────────────────────────
+    let routing: any = null;
+    if (workspace_slug) {
+      const { data: wsList } = await sbAdmin
+        .from("legal_workspaces")
+        .select("slug, name_fa, description")
+        .order("order_index");
+      const classification = await routeWorkspace(question, wsList || [], LOVABLE_API_KEY);
+      if (
+        classification.best_slug &&
+        classification.best_slug !== workspace_slug &&
+        classification.confidence >= 0.7
+      ) {
+        const suggested = (wsList || []).find((w) => w.slug === classification.best_slug);
+        if (suggested) {
+          routing = {
+            suggested_slug: suggested.slug,
+            suggested_name: suggested.name_fa,
+            confidence: classification.confidence,
+            reason: classification.reason,
+          };
+        }
+      }
+    }
 
     // RAG retrieval (only if workspace specified)
     let sources: any[] = [];
@@ -170,13 +297,25 @@ serve(async (req) => {
       };
     }
 
-    // Attach citation metadata
+    // ── (ج) Output Compliance check on AI response ────────────
+    const outCheck = checkCompliance(
+      [parsed.summary, parsed.analysis, parsed.draft].filter(Boolean).join("\n"),
+    );
+    if (outCheck.blocked) {
+      parsed.analysis = `پاسخ تولیدی شامل محتوای خارج از چارچوب مجاز (${outCheck.reason}) بود و حذف شد.`;
+      parsed.draft = null;
+      parsed.blocked = true;
+      parsed.block_reason = outCheck.reason;
+    }
+
+    // Attach citation metadata + routing hint
     parsed.sources = sources.map((s: any) => ({
       title: s.document_title,
       source_type: s.source_type,
       excerpt: s.content.substring(0, 300),
       similarity: s.similarity,
     }));
+    if (routing) parsed.routing = routing;
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
