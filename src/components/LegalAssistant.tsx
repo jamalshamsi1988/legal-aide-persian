@@ -73,6 +73,9 @@ const analyzeLegalQuestion = async (
     nextSteps: data.nextSteps || [],
     draft: data.draft || null,
     sources: data.sources || [],
+    routing: data.routing,
+    blocked: data.blocked,
+    block_reason: data.block_reason,
   };
 };
 
