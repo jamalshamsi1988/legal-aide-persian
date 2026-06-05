@@ -190,7 +190,41 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
     const sbAdmin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // ── Auth + RBAC enforcement ──────────────────────────────
+    const authHeader = req.headers.get("Authorization") || "";
+    const sbUser = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData } = await sbUser.auth.getUser();
+    const user = userData?.user;
+    if (!user) {
+      return new Response(JSON.stringify({ error: "برای استفاده از دستیار حقوقی باید وارد حساب شوید." }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (workspace_slug) {
+      const { data: ws } = await sbAdmin.from("legal_workspaces").select("id").eq("slug", workspace_slug).maybeSingle();
+      if (!ws) {
+        return new Response(JSON.stringify({ error: "فضای کاری یافت نشد." }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const [{ data: roleRow }, { data: accessRow }] = await Promise.all([
+        sbAdmin.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle(),
+        sbAdmin.from("workspace_access").select("level").eq("user_id", user.id).eq("workspace_id", ws.id).maybeSingle(),
+      ]);
+      const isAdmin = !!roleRow;
+      const hasAccess = isAdmin || !!accessRow;
+      if (!hasAccess) {
+        return new Response(JSON.stringify({ error: "شما به این فضای کاری دسترسی ندارید. لطفاً از ادمین درخواست دسترسی کنید." }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
 
     // ── (ب) Context-Aware Router ─────────────────────────────
     let routing: any = null;

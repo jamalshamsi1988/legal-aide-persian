@@ -81,11 +81,32 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!LOVABLE_API_KEY || !SUPABASE_URL || !SERVICE_KEY) {
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!LOVABLE_API_KEY || !SUPABASE_URL || !SERVICE_KEY || !ANON_KEY) {
       throw new Error("Server misconfigured");
     }
 
+    // Admin-only enforcement
+    const authHeader = req.headers.get("Authorization") || "";
+    const sbUser = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData } = await sbUser.auth.getUser();
+    const user = userData?.user;
+    if (!user) {
+      return new Response(JSON.stringify({ error: "ابتدا وارد شوید." }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+    const { data: roleRow } = await supabase
+      .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+    if (!roleRow) {
+      return new Response(JSON.stringify({ error: "فقط ادمین مجاز به افزودن سند است." }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     // Look up workspace
     const { data: ws, error: wsErr } = await supabase

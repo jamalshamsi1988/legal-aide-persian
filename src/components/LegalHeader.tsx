@@ -1,9 +1,36 @@
-import { Scale, Gavel, BookOpen, Shield } from "lucide-react";
+import { Scale, Gavel, BookOpen, Shield, LogOut, LogIn, ShieldCheck } from "lucide-react";
 import legalHero from "@/assets/legal-hero.jpg";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+
 
 export const LegalHeader = () => {
+  const { user, isAdmin, signOut } = useAuth();
   return (
     <header className="relative overflow-hidden">
+      {/* Top bar */}
+      <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-end gap-2 p-3">
+        {isAdmin && (
+          <Link to="/admin/corpus">
+            <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
+              <ShieldCheck className="w-4 h-4 ml-1" /> پنل ادمین
+            </Button>
+          </Link>
+        )}
+        {user ? (
+          <Button size="sm" variant="outline" onClick={signOut} className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
+            <LogOut className="w-4 h-4 ml-1" /> خروج
+          </Button>
+        ) : (
+          <Link to="/auth">
+            <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
+              <LogIn className="w-4 h-4 ml-1" /> ورود
+            </Button>
+          </Link>
+        )}
+      </div>
+
       {/* Hero background */}
       <div className="absolute inset-0">
         <img
