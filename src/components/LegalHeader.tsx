@@ -1,5 +1,9 @@
-import { Scale, Gavel, BookOpen, Shield } from "lucide-react";
+import { Scale, Gavel, BookOpen, Shield, LogOut, LogIn, ShieldCheck } from "lucide-react";
 import legalHero from "@/assets/legal-hero.jpg";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+
 
 export const LegalHeader = () => {
   return (
