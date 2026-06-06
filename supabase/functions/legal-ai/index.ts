@@ -424,6 +424,12 @@ serve(async (req) => {
       excerpt: s.content.substring(0, 300),
       similarity: s.similarity,
     }));
+    parsed.related = related.map((r: any) => ({
+      title: r.related_title,
+      source_type: r.related_source_type,
+      relation_type: r.relation_type,
+      note: r.note,
+    }));
     if (routing) parsed.routing = routing;
 
     await logAudit(sbAdmin, {
