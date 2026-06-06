@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import WorkspacePage from "./pages/WorkspacePage";
 import AdminCorpus from "./pages/AdminCorpus";
+import AdminAudit from "./pages/AdminAudit";
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -30,6 +31,10 @@ const App = () => (
             <Route
               path="/admin/corpus"
               element={<ProtectedRoute requireAdmin><AdminCorpus /></ProtectedRoute>}
+            />
+            <Route
+              path="/admin/audit"
+              element={<ProtectedRoute requireAdmin><AdminAudit /></ProtectedRoute>}
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
