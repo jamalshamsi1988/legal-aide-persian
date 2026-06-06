@@ -79,7 +79,7 @@ const SectionCard = ({
   );
 };
 
-export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, sources, routing, blocked, block_reason }: LegalResultProps) => {
+export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, sources, related, routing, blocked, block_reason }: LegalResultProps) => {
   const handleDownload = () => {
     generateLegalPdf({ summary, legalBasis, analysis, nextSteps, draft });
   };
