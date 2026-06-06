@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Send, Loader2, RotateCcw, HelpCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { LegalResult, type LegalSource, type RoutingHint } from "./LegalResult";
+import { LegalResult, type LegalSource, type RoutingHint, type RelatedDocument } from "./LegalResult";
 import { FileUploadZone, type UploadedFile } from "./FileUploadZone";
 
 interface LegalAnalysis {
@@ -12,6 +12,7 @@ interface LegalAnalysis {
   nextSteps: string[];
   draft: string | null;
   sources?: LegalSource[];
+  related?: RelatedDocument[];
   routing?: RoutingHint;
   blocked?: boolean;
   block_reason?: string;
