@@ -12,11 +12,18 @@ export const LegalHeader = () => {
       {/* Top bar */}
       <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-end gap-2 p-3">
         {isAdmin && (
-          <Link to="/admin/corpus">
-            <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
-              <ShieldCheck className="w-4 h-4 ml-1" /> پنل ادمین
-            </Button>
-          </Link>
+          <>
+            <Link to="/admin/corpus">
+              <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
+                <ShieldCheck className="w-4 h-4 ml-1" /> پایگاه دانش
+              </Button>
+            </Link>
+            <Link to="/admin/audit">
+              <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
+                <ShieldCheck className="w-4 h-4 ml-1" /> گزارش‌ها
+              </Button>
+            </Link>
+          </>
         )}
         {user ? (
           <Button size="sm" variant="outline" onClick={signOut} className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
