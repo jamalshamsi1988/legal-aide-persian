@@ -1,4 +1,4 @@
-import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download, Library, Compass, ShieldAlert } from "lucide-react";
+import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download, Library, Compass, ShieldAlert, Link2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateLegalPdf } from "@/lib/generatePdf";
 
@@ -7,6 +7,13 @@ export interface LegalSource {
   source_type: string;
   excerpt: string;
   similarity: number;
+}
+
+export interface RelatedDocument {
+  title: string;
+  source_type: string;
+  relation_type: string;
+  note: string | null;
 }
 
 export interface RoutingHint {
@@ -23,6 +30,7 @@ interface LegalResultProps {
   nextSteps: string[];
   draft: string | null;
   sources?: LegalSource[];
+  related?: RelatedDocument[];
   routing?: RoutingHint;
   blocked?: boolean;
   block_reason?: string;
