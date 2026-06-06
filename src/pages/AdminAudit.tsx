@@ -181,7 +181,7 @@ const AdminAudit = () => {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </tbody>
