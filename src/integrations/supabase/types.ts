@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          block_reason: string | null
+          blocked: boolean
+          created_at: string
+          detailed: boolean
+          duration_ms: number | null
+          error_message: string | null
+          files_count: number
+          id: string
+          question: string
+          question_length: number
+          response_summary: string | null
+          routing_confidence: number | null
+          routing_suggested_slug: string | null
+          sources_count: number
+          status: string
+          user_id: string | null
+          workspace_slug: string | null
+        }
+        Insert: {
+          block_reason?: string | null
+          blocked?: boolean
+          created_at?: string
+          detailed?: boolean
+          duration_ms?: number | null
+          error_message?: string | null
+          files_count?: number
+          id?: string
+          question: string
+          question_length?: number
+          response_summary?: string | null
+          routing_confidence?: number | null
+          routing_suggested_slug?: string | null
+          sources_count?: number
+          status?: string
+          user_id?: string | null
+          workspace_slug?: string | null
+        }
+        Update: {
+          block_reason?: string | null
+          blocked?: boolean
+          created_at?: string
+          detailed?: boolean
+          duration_ms?: number | null
+          error_message?: string | null
+          files_count?: number
+          id?: string
+          question?: string
+          question_length?: number
+          response_summary?: string | null
+          routing_confidence?: number | null
+          routing_suggested_slug?: string | null
+          sources_count?: number
+          status?: string
+          user_id?: string | null
+          workspace_slug?: string | null
+        }
+        Relationships: []
+      }
       legal_chunks: {
         Row: {
           chunk_index: number
