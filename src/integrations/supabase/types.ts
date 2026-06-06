@@ -160,6 +160,70 @@ export type Database = {
           },
         ]
       }
+      legal_relations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          relation_type: Database["public"]["Enums"]["legal_relation_type"]
+          source_anchor: string | null
+          source_document_id: string
+          target_anchor: string | null
+          target_document_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          relation_type?: Database["public"]["Enums"]["legal_relation_type"]
+          source_anchor?: string | null
+          source_document_id: string
+          target_anchor?: string | null
+          target_document_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          relation_type?: Database["public"]["Enums"]["legal_relation_type"]
+          source_anchor?: string | null
+          source_document_id?: string
+          target_anchor?: string | null
+          target_document_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_relations_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_relations_target_document_id_fkey"
+            columns: ["target_document_id"]
+            isOneToOne: false
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_relations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "legal_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_workspaces: {
         Row: {
           created_at: string
@@ -269,6 +333,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_related_documents: {
+        Args: {
+          _document_ids: string[]
+          _max_per_doc?: number
+          _workspace_slug: string
+        }
+        Returns: {
+          note: string
+          related_document_id: string
+          related_source_type: string
+          related_title: string
+          relation_type: Database["public"]["Enums"]["legal_relation_type"]
+          source_anchor: string
+          source_document_id: string
+          target_anchor: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -303,6 +384,13 @@ export type Database = {
     Enums: {
       access_level: "read" | "write"
       app_role: "admin" | "lawyer" | "restricted"
+      legal_relation_type:
+        | "REFERENCES"
+        | "AMENDS"
+        | "REPEALS"
+        | "INTERPRETS"
+        | "RELATES_TO"
+        | "CITED_BY"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -432,6 +520,14 @@ export const Constants = {
     Enums: {
       access_level: ["read", "write"],
       app_role: ["admin", "lawyer", "restricted"],
+      legal_relation_type: [
+        "REFERENCES",
+        "AMENDS",
+        "REPEALS",
+        "INTERPRETS",
+        "RELATES_TO",
+        "CITED_BY",
+      ],
     },
   },
 } as const

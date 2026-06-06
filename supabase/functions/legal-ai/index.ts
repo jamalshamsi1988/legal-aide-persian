@@ -304,6 +304,7 @@ serve(async (req) => {
 
     // RAG retrieval (only if workspace specified)
     let sources: any[] = [];
+    let related: any[] = [];
     let contextBlock = "";
     if (workspace_slug) {
       sources = await retrieveContext(workspace_slug, question, LOVABLE_API_KEY, SUPABASE_URL, SERVICE_KEY);
@@ -313,6 +314,28 @@ serve(async (req) => {
             `[منبع ${i + 1}] ${s.document_title} (${s.source_type}):\n${s.content}`
           ).join("\n\n---\n\n") +
           "\n=== پایان منابع ===\n\nدر تحلیل و legalBasis خود به این منابع استناد کن.";
+
+        // Graph-like related documents (Legal Relations)
+        try {
+          const docIds = Array.from(new Set(sources.map((s: any) => s.document_id))).filter(Boolean);
+          if (docIds.length > 0) {
+            const { data: relRows } = await sbAdmin.rpc("get_related_documents", {
+              _document_ids: docIds,
+              _workspace_slug: workspace_slug,
+              _max_per_doc: 3,
+            });
+            related = relRows || [];
+            if (related.length > 0) {
+              contextBlock += "\n\n=== اسناد مرتبط (روابط حقوقی ثبت‌شده) ===\n" +
+                related.slice(0, 10).map((r: any, i: number) =>
+                  `[مرتبط ${i + 1}] ${r.related_title} (${r.related_source_type}) — نوع رابطه: ${r.relation_type}${r.note ? ` — ${r.note}` : ""}`
+                ).join("\n") +
+                "\n=== پایان اسناد مرتبط ===";
+            }
+          }
+        } catch (e) {
+          console.warn("related docs fetch failed", e);
+        }
       }
     }
 
@@ -400,6 +423,12 @@ serve(async (req) => {
       source_type: s.source_type,
       excerpt: s.content.substring(0, 300),
       similarity: s.similarity,
+    }));
+    parsed.related = related.map((r: any) => ({
+      title: r.related_title,
+      source_type: r.related_source_type,
+      relation_type: r.relation_type,
+      note: r.note,
     }));
     if (routing) parsed.routing = routing;
 

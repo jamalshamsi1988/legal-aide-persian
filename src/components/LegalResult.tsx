@@ -1,4 +1,4 @@
-import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download, Library, Compass, ShieldAlert } from "lucide-react";
+import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download, Library, Compass, ShieldAlert, Link2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateLegalPdf } from "@/lib/generatePdf";
 
@@ -7,6 +7,13 @@ export interface LegalSource {
   source_type: string;
   excerpt: string;
   similarity: number;
+}
+
+export interface RelatedDocument {
+  title: string;
+  source_type: string;
+  relation_type: string;
+  note: string | null;
 }
 
 export interface RoutingHint {
@@ -23,6 +30,7 @@ interface LegalResultProps {
   nextSteps: string[];
   draft: string | null;
   sources?: LegalSource[];
+  related?: RelatedDocument[];
   routing?: RoutingHint;
   blocked?: boolean;
   block_reason?: string;
@@ -71,7 +79,7 @@ const SectionCard = ({
   );
 };
 
-export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, sources, routing, blocked, block_reason }: LegalResultProps) => {
+export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, sources, related, routing, blocked, block_reason }: LegalResultProps) => {
   const handleDownload = () => {
     generateLegalPdf({ summary, legalBasis, analysis, nextSteps, draft });
   };
@@ -179,6 +187,25 @@ export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, s
                   </span>
                 </div>
                 <p className="text-xs text-foreground/80 leading-relaxed line-clamp-3">{s.excerpt}…</p>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+      )}
+
+      {/* Related documents from Legal Relations graph */}
+      {related && related.length > 0 && (
+        <SectionCard icon={<Link2 className="w-4 h-4" />} title="اسناد مرتبط (روابط حقوقی)" accentColor="navy" delay={600}>
+          <ul className="space-y-2">
+            {related.map((r, i) => (
+              <li key={i} className="bg-white/60 rounded-lg p-3 border border-navy/10 text-xs">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-navy font-bold">{r.title}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {r.source_type} • {r.relation_type}
+                  </span>
+                </div>
+                {r.note && <p className="text-foreground/80 leading-relaxed">{r.note}</p>}
               </li>
             ))}
           </ul>

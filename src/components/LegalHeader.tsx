@@ -23,6 +23,11 @@ export const LegalHeader = () => {
                 <ShieldCheck className="w-4 h-4 ml-1" /> گزارش‌ها
               </Button>
             </Link>
+            <Link to="/admin/relations">
+              <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
+                <ShieldCheck className="w-4 h-4 ml-1" /> روابط
+              </Button>
+            </Link>
           </>
         )}
         {user ? (
