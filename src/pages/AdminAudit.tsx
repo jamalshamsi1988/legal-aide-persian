@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { LegalHeader } from "@/components/LegalHeader";
@@ -126,9 +126,8 @@ const AdminAudit = () => {
                   {rows.map((r) => {
                     const isOpen = expanded === r.id;
                     return (
-                      <>
+                      <Fragment key={r.id}>
                         <tr
-                          key={r.id}
                           className="border-t border-border hover:bg-muted/30 cursor-pointer"
                           onClick={() => setExpanded(isOpen ? null : r.id)}
                         >
