@@ -154,22 +154,84 @@ ${list}
   }
 }
 
+// ── Audit logger (best-effort, never throws) ──────────────
+async function logAudit(sbAdmin: any, entry: Record<string, any>) {
+  try {
+    await sbAdmin.from("audit_logs").insert(entry);
+  } catch (e) {
+    console.warn("audit log insert failed", e);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const startedAt = Date.now();
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const sbAdmin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+  let auditBase: Record<string, any> = {
+    user_id: null,
+    workspace_slug: null,
+    question: "",
+    question_length: 0,
+    files_count: 0,
+    detailed: false,
+  };
+
   try {
     const { question, files, detailed, workspace_slug } = await req.json();
+    auditBase = {
+      ...auditBase,
+      workspace_slug: workspace_slug || null,
+      question: (question || "").slice(0, 4000),
+      question_length: (question || "").length,
+      files_count: Array.isArray(files) ? files.length : 0,
+      detailed: !!detailed,
+    };
 
     if (!question || question.trim().length < 15) {
+      await logAudit(sbAdmin, {
+        ...auditBase, status: "validation_error",
+        error_message: "question too short", duration_ms: Date.now() - startedAt,
+      });
       return new Response(
         JSON.stringify({ error: "لطفاً سوال حقوقی خود را به طور کامل بنویسید." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // ── (الف) Compliance Filter ──────────────────────────────
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // ── Auth check FIRST (so audit log has user_id) ──────────
+    const authHeader = req.headers.get("Authorization") || "";
+    const sbUser = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData } = await sbUser.auth.getUser();
+    const user = userData?.user;
+    if (!user) {
+      await logAudit(sbAdmin, {
+        ...auditBase, status: "unauthorized",
+        error_message: "no auth", duration_ms: Date.now() - startedAt,
+      });
+      return new Response(JSON.stringify({ error: "برای استفاده از دستیار حقوقی باید وارد حساب شوید." }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    auditBase.user_id = user.id;
+
+    // ── (الف) Compliance Filter (input) ──────────────────────
     const compliance = checkCompliance(question);
     if (compliance.blocked) {
+      await logAudit(sbAdmin, {
+        ...auditBase, status: "blocked_input",
+        blocked: true, block_reason: compliance.reason,
+        duration_ms: Date.now() - startedAt,
+      });
       return new Response(
         JSON.stringify({
           summary: "این درخواست خارج از چارچوب مجاز خدمت حقوقی است.",
@@ -186,28 +248,14 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const sbAdmin = createClient(SUPABASE_URL, SERVICE_KEY);
-
-    // ── Auth + RBAC enforcement ──────────────────────────────
-    const authHeader = req.headers.get("Authorization") || "";
-    const sbUser = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData } = await sbUser.auth.getUser();
-    const user = userData?.user;
-    if (!user) {
-      return new Response(JSON.stringify({ error: "برای استفاده از دستیار حقوقی باید وارد حساب شوید." }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // ── Workspace RBAC ───────────────────────────────────────
     if (workspace_slug) {
       const { data: ws } = await sbAdmin.from("legal_workspaces").select("id").eq("slug", workspace_slug).maybeSingle();
       if (!ws) {
+        await logAudit(sbAdmin, {
+          ...auditBase, status: "workspace_not_found",
+          duration_ms: Date.now() - startedAt,
+        });
         return new Response(JSON.stringify({ error: "فضای کاری یافت نشد." }), {
           status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -219,12 +267,15 @@ serve(async (req) => {
       const isAdmin = !!roleRow;
       const hasAccess = isAdmin || !!accessRow;
       if (!hasAccess) {
+        await logAudit(sbAdmin, {
+          ...auditBase, status: "forbidden",
+          error_message: "no workspace access", duration_ms: Date.now() - startedAt,
+        });
         return new Response(JSON.stringify({ error: "شما به این فضای کاری دسترسی ندارید. لطفاً از ادمین درخواست دسترسی کنید." }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
-
 
     // ── (ب) Context-Aware Router ─────────────────────────────
     let routing: any = null;
@@ -265,7 +316,6 @@ serve(async (req) => {
       }
     }
 
-    // Build multimodal content array
     const userContent: any[] = [{ type: "text", text: question }];
     if (files && Array.isArray(files)) {
       for (const file of files) {
@@ -297,6 +347,11 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
+      const errText = await response.text().catch(() => "");
+      await logAudit(sbAdmin, {
+        ...auditBase, status: `ai_error_${response.status}`,
+        error_message: errText.slice(0, 500), duration_ms: Date.now() - startedAt,
+      });
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "تعداد درخواست‌ها بیش از حد مجاز است. لطفاً کمی صبر کنید." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -307,8 +362,7 @@ serve(async (req) => {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      console.error("AI gateway error:", response.status, errText);
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
@@ -316,7 +370,7 @@ serve(async (req) => {
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("No content in AI response");
 
-    let parsed;
+    let parsed: any;
     try {
       const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       parsed = JSON.parse(cleaned);
@@ -331,7 +385,6 @@ serve(async (req) => {
       };
     }
 
-    // ── (ج) Output Compliance check on AI response ────────────
     const outCheck = checkCompliance(
       [parsed.summary, parsed.analysis, parsed.draft].filter(Boolean).join("\n"),
     );
@@ -342,7 +395,6 @@ serve(async (req) => {
       parsed.block_reason = outCheck.reason;
     }
 
-    // Attach citation metadata + routing hint
     parsed.sources = sources.map((s: any) => ({
       title: s.document_title,
       source_type: s.source_type,
@@ -351,11 +403,28 @@ serve(async (req) => {
     }));
     if (routing) parsed.routing = routing;
 
+    await logAudit(sbAdmin, {
+      ...auditBase,
+      response_summary: (parsed.summary || "").slice(0, 500),
+      sources_count: sources.length,
+      routing_suggested_slug: routing?.suggested_slug || null,
+      routing_confidence: routing?.confidence ?? null,
+      blocked: !!parsed.blocked,
+      block_reason: parsed.block_reason || null,
+      status: parsed.blocked ? "blocked_output" : "ok",
+      duration_ms: Date.now() - startedAt,
+    });
+
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("legal-ai error:", e);
+    await logAudit(sbAdmin, {
+      ...auditBase, status: "error",
+      error_message: (e instanceof Error ? e.message : String(e)).slice(0, 500),
+      duration_ms: Date.now() - startedAt,
+    });
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "خطای ناشناخته" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
