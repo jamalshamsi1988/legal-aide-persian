@@ -192,6 +192,25 @@ export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, s
           </ul>
         </SectionCard>
       )}
+
+      {/* Related documents from Legal Relations graph */}
+      {related && related.length > 0 && (
+        <SectionCard icon={<Link2 className="w-4 h-4" />} title="اسناد مرتبط (روابط حقوقی)" accentColor="navy" delay={600}>
+          <ul className="space-y-2">
+            {related.map((r, i) => (
+              <li key={i} className="bg-white/60 rounded-lg p-3 border border-navy/10 text-xs">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-navy font-bold">{r.title}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {r.source_type} • {r.relation_type}
+                  </span>
+                </div>
+                {r.note && <p className="text-foreground/80 leading-relaxed">{r.note}</p>}
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+      )}
     </div>
   );
 };
