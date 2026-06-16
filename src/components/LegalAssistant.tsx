@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Send, Loader2, RotateCcw, HelpCircle } from "lucide-react";
+import { Send, Loader2, RotateCcw, HelpCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { LegalResult } from "./LegalResult";
+import { LegalResult, type LegalSource, type RoutingHint, type RelatedDocument } from "./LegalResult";
 import { FileUploadZone, type UploadedFile } from "./FileUploadZone";
 
 interface LegalAnalysis {
@@ -11,6 +11,11 @@ interface LegalAnalysis {
   analysis: string;
   nextSteps: string[];
   draft: string | null;
+  sources?: LegalSource[];
+  related?: RelatedDocument[];
+  routing?: RoutingHint;
+  blocked?: boolean;
+  block_reason?: string;
 }
 
 const EXAMPLE_QUESTIONS = [
@@ -32,9 +37,10 @@ const fileToBase64 = (file: File): Promise<string> =>
 
 const analyzeLegalQuestion = async (
   question: string,
-  uploadedFiles: UploadedFile[]
+  uploadedFiles: UploadedFile[],
+  detailed: boolean = false,
+  workspaceSlug?: string,
 ): Promise<LegalAnalysis> => {
-  // Convert files to base64
   const files = await Promise.all(
     uploadedFiles.map(async (uf) => ({
       type: uf.type,
@@ -45,7 +51,12 @@ const analyzeLegalQuestion = async (
   );
 
   const { data, error } = await supabase.functions.invoke("legal-ai", {
-    body: { question, files: files.length > 0 ? files : undefined },
+    body: {
+      question,
+      files: files.length > 0 ? files : undefined,
+      detailed,
+      workspace_slug: workspaceSlug,
+    },
   });
 
   if (error) {
@@ -62,17 +73,27 @@ const analyzeLegalQuestion = async (
     analysis: data.analysis || "",
     nextSteps: data.nextSteps || [],
     draft: data.draft || null,
+    sources: data.sources || [],
+    related: data.related || [],
+    routing: data.routing,
+    blocked: data.blocked,
+    block_reason: data.block_reason,
   };
 };
 
-export const LegalAssistant = () => {
+interface LegalAssistantProps {
+  workspaceSlug?: string;
+  workspaceName?: string;
+}
+
+export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantProps = {}) => {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<LegalAnalysis | null>(null);
   const [error, setError] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (detailed: boolean = false) => {
     if (!question.trim() || question.trim().length < 15) {
       setError("لطفاً سوال حقوقی خود را به طور کامل بنویسید (حداقل ۱۵ کاراکتر).");
       return;
@@ -81,7 +102,7 @@ export const LegalAssistant = () => {
     setLoading(true);
     setResult(null);
     try {
-      const analysis = await analyzeLegalQuestion(question, files);
+      const analysis = await analyzeLegalQuestion(question, files, detailed, workspaceSlug);
       setResult(analysis);
     } catch (err) {
       const message = err instanceof Error ? err.message : "خطایی در پردازش سوال شما رخ داد.";
@@ -168,34 +189,53 @@ export const LegalAssistant = () => {
           />
 
           {/* Action buttons */}
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleSubmit(false)}
+                disabled={loading || !question.trim()}
+                className="flex-1 flex items-center justify-center gap-2 gradient-gold text-navy font-bold rounded-xl px-5 py-3 shadow-gold hover:opacity-90 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    در حال تحلیل...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    تحلیل حقوقی
+                    {files.length > 0 && ` (${files.length} فایل)`}
+                  </>
+                )}
+              </button>
+              {(result || question || files.length > 0) && (
+                <button
+                  onClick={handleReset}
+                  className="flex items-center gap-2 bg-secondary text-navy border border-border rounded-xl px-4 py-3 text-sm hover:bg-muted transition-colors duration-200"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  پاک کردن
+                </button>
+              )}
+            </div>
             <button
-              onClick={handleSubmit}
+              onClick={() => handleSubmit(true)}
               disabled={loading || !question.trim()}
-              className="flex-1 flex items-center justify-center gap-2 gradient-gold text-navy font-bold rounded-xl px-5 py-3 shadow-gold hover:opacity-90 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+              className="w-full flex items-center justify-center gap-2 bg-navy text-primary-foreground font-bold rounded-xl px-5 py-3 hover:bg-navy/90 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed text-sm border-2 border-gold/30"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  در حال تحلیل...
+                  در حال تحلیل ویژه...
                 </>
               ) : (
                 <>
-                  <Send className="w-4 h-4" />
-                  تحلیل حقوقی
-                  {files.length > 0 && ` (${files.length} فایل)`}
+                  <FileText className="w-4 h-4 text-gold" />
+                  تحلیل ویژه — لایحه و شکایت مفصل (۲۰۰۰-۳۰۰۰ کلمه)
                 </>
               )}
             </button>
-            {(result || question || files.length > 0) && (
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-2 bg-secondary text-navy border border-border rounded-xl px-4 py-3 text-sm hover:bg-muted transition-colors duration-200"
-              >
-                <RotateCcw className="w-4 h-4" />
-                پاک کردن
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -227,6 +267,11 @@ export const LegalAssistant = () => {
           analysis={result.analysis}
           nextSteps={result.nextSteps}
           draft={result.draft}
+          sources={result.sources}
+          related={result.related}
+          routing={result.routing}
+          blocked={result.blocked}
+          block_reason={result.block_reason}
         />
       )}
 

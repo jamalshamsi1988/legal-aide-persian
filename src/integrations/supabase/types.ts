@@ -14,16 +14,383 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          block_reason: string | null
+          blocked: boolean
+          created_at: string
+          detailed: boolean
+          duration_ms: number | null
+          error_message: string | null
+          files_count: number
+          id: string
+          question: string
+          question_length: number
+          response_summary: string | null
+          routing_confidence: number | null
+          routing_suggested_slug: string | null
+          sources_count: number
+          status: string
+          user_id: string | null
+          workspace_slug: string | null
+        }
+        Insert: {
+          block_reason?: string | null
+          blocked?: boolean
+          created_at?: string
+          detailed?: boolean
+          duration_ms?: number | null
+          error_message?: string | null
+          files_count?: number
+          id?: string
+          question: string
+          question_length?: number
+          response_summary?: string | null
+          routing_confidence?: number | null
+          routing_suggested_slug?: string | null
+          sources_count?: number
+          status?: string
+          user_id?: string | null
+          workspace_slug?: string | null
+        }
+        Update: {
+          block_reason?: string | null
+          blocked?: boolean
+          created_at?: string
+          detailed?: boolean
+          duration_ms?: number | null
+          error_message?: string | null
+          files_count?: number
+          id?: string
+          question?: string
+          question_length?: number
+          response_summary?: string | null
+          routing_confidence?: number | null
+          routing_suggested_slug?: string | null
+          sources_count?: number
+          status?: string
+          user_id?: string | null
+          workspace_slug?: string | null
+        }
+        Relationships: []
+      }
+      legal_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          document_id: string
+          embedding: string | null
+          id: string
+          metadata: Json
+          workspace_id: string
+        }
+        Insert: {
+          chunk_index: number
+          content: string
+          created_at?: string
+          document_id: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json
+          workspace_id: string
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          document_id?: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_chunks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_chunks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "legal_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_documents: {
+        Row: {
+          created_at: string
+          id: string
+          published_date: string | null
+          raw_text: string | null
+          source_type: string
+          title: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          published_date?: string | null
+          raw_text?: string | null
+          source_type?: string
+          title: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          published_date?: string | null
+          raw_text?: string | null
+          source_type?: string
+          title?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_documents_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "legal_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_relations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          relation_type: Database["public"]["Enums"]["legal_relation_type"]
+          source_anchor: string | null
+          source_document_id: string
+          target_anchor: string | null
+          target_document_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          relation_type?: Database["public"]["Enums"]["legal_relation_type"]
+          source_anchor?: string | null
+          source_document_id: string
+          target_anchor?: string | null
+          target_document_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          relation_type?: Database["public"]["Enums"]["legal_relation_type"]
+          source_anchor?: string | null
+          source_document_id?: string
+          target_anchor?: string | null
+          target_document_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_relations_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_relations_target_document_id_fkey"
+            columns: ["target_document_id"]
+            isOneToOne: false
+            referencedRelation: "legal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_relations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "legal_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_workspaces: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name_fa: string
+          order_index: number
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name_fa: string
+          order_index?: number
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name_fa?: string
+          order_index?: number
+          slug?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      workspace_access: {
+        Row: {
+          created_at: string
+          id: string
+          level: Database["public"]["Enums"]["access_level"]
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level?: Database["public"]["Enums"]["access_level"]
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: Database["public"]["Enums"]["access_level"]
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_access_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "legal_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_related_documents: {
+        Args: {
+          _document_ids: string[]
+          _max_per_doc?: number
+          _workspace_slug: string
+        }
+        Returns: {
+          note: string
+          related_document_id: string
+          related_source_type: string
+          related_title: string
+          relation_type: Database["public"]["Enums"]["legal_relation_type"]
+          source_anchor: string
+          source_document_id: string
+          target_anchor: string
+        }[]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      has_workspace_access: {
+        Args: {
+          _min_level?: Database["public"]["Enums"]["access_level"]
+          _user_id: string
+          _workspace_id: string
+        }
+        Returns: boolean
+      }
+      match_legal_chunks: {
+        Args: {
+          match_count?: number
+          query_embedding: string
+          workspace_slug: string
+        }
+        Returns: {
+          chunk_id: string
+          content: string
+          document_id: string
+          document_title: string
+          similarity: number
+          source_type: string
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      access_level: "read" | "write"
+      app_role: "admin" | "lawyer" | "restricted"
+      legal_relation_type:
+        | "REFERENCES"
+        | "AMENDS"
+        | "REPEALS"
+        | "INTERPRETS"
+        | "RELATES_TO"
+        | "CITED_BY"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +517,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      access_level: ["read", "write"],
+      app_role: ["admin", "lawyer", "restricted"],
+      legal_relation_type: [
+        "REFERENCES",
+        "AMENDS",
+        "REPEALS",
+        "INTERPRETS",
+        "RELATES_TO",
+        "CITED_BY",
+      ],
+    },
   },
 } as const

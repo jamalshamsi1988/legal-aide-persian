@@ -1,11 +1,11 @@
 import { LegalHeader } from "@/components/LegalHeader";
-import { LegalAssistant } from "@/components/LegalAssistant";
+import { WorkspaceSelector } from "@/components/WorkspaceSelector";
 
 const Index = () => {
   return (
     <div className="min-h-screen gradient-section">
       <LegalHeader />
-      <LegalAssistant />
+      <WorkspaceSelector />
     </div>
   );
 };
