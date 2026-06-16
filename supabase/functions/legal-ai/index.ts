@@ -315,7 +315,17 @@ serve(async (req) => {
         });
       }
       console.error("AI gateway error:", response.status, errText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      return new Response(
+        JSON.stringify({
+          error: "AI gateway error",
+          status: response.status,
+          details: errText.slice(0, 1000),
+        }),
+        {
+          status: response.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const data = await response.json();
