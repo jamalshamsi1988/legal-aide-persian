@@ -1,3 +1,17 @@
+// ============================================================
+// صفحه مدیریت پایگاه دانش حقوقی (Admin Corpus)
+// ============================================================
+// این صفحه برای مدیران سیستم است و امکان مدیریت کامل
+// پایگاه دانش حقوقی (Legal Corpus) را فراهم می‌کند:
+// - آپلود گروهی فایل‌های قانونی (PDF، تصاویر، متن)
+// - استخراج خودکار متن از PDF (فارسی/عربی/انگلیسی)
+// - OCR برای تصاویر و صفحات PDF اسکن‌شده
+// - تزریق و embedding متن‌ها در پایگاه داده
+// - مشاهده و حذف اسناد موجود
+// ============================================================
+// دسترسی: فقط کاربران با نقش "admin"
+// ============================================================
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Upload, Trash2, Loader2, ArrowRight, FileText, FileUp, Image as ImageIcon } from "lucide-react";
@@ -6,6 +20,9 @@ import { toast } from "@/hooks/use-toast";
 import { LegalHeader } from "@/components/LegalHeader";
 import { extractTextFromFile, splitForIngest } from "@/lib/extractText";
 
+// ============================================================
+// تعریف انواع داده‌های مورد نیاز در این صفحه
+// ============================================================
 interface Workspace {
   id: string;
   slug: string;
@@ -19,6 +36,9 @@ interface DocRow {
   created_at: string;
 }
 
+// ============================================================
+// انواع منبع‌های حقوقی قابل پذیرش در سیستم
+// ============================================================
 const SOURCE_TYPES = [
   { value: "law", label: "قانون" },
   { value: "regulation", label: "آیین‌نامه" },
@@ -26,18 +46,27 @@ const SOURCE_TYPES = [
   { value: "ruling", label: "رای وحدت رویه" },
 ];
 
+// ============================================================
+// کامپوننت اصلی مدیریت پایگاه دانش
+// ============================================================
 const AdminCorpus = () => {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [selectedSlug, setSelectedSlug] = useState<string>("");
-  const [docs, setDocs] = useState<DocRow[]>([]);
-  const [title, setTitle] = useState("");
-  const [sourceType, setSourceType] = useState("law");
-  const [rawText, setRawText] = useState("");
-  const [ingesting, setIngesting] = useState(false);
-  const [extracting, setExtracting] = useState(false);
-  const [progress, setProgress] = useState<string>("");
-  const [batchLog, setBatchLog] = useState<string[]>([]);
+  // ============================================================
+  // Stateهای صفحه
+  // ============================================================
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);       // لیست فضاهای کاری
+  const [selectedSlug, setSelectedSlug] = useState<string>("");         // فضای کاری انتخاب‌شده
+  const [docs, setDocs] = useState<DocRow[]>([]);                       // لیست اسناد موجود
+  const [title, setTitle] = useState("");                               // عنوان سند برای ورودی تکی
+  const [sourceType, setSourceType] = useState("law");                  // نوع منبع حقوقی
+  const [rawText, setRawText] = useState("");                           // متن استخراج‌شده برای بازبینی
+  const [ingesting, setIngesting] = useState(false);                    // وضعیت تزریق و embedding
+  const [extracting, setExtracting] = useState(false);                  // وضعیت استخراج متن از فایل
+  const [progress, setProgress] = useState<string>("");                 // پیام پیشرفت عملیات
+  const [batchLog, setBatchLog] = useState<string[]>([]);               // لاگ پردازش گروهی
 
+  // ============================================================
+  // بارگیری لیست فضاهای کاری از پایگاه داده
+  // ============================================================
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -51,6 +80,9 @@ const AdminCorpus = () => {
     })();
   }, []);
 
+  // ============================================================
+  // بارگیری لیست اسناد یک فضای کاری خاص
+  // ============================================================
   const loadDocs = async (slug: string) => {
     const ws = workspaces.find((w) => w.slug === slug);
     if (!ws) return setDocs([]);
@@ -62,10 +94,19 @@ const AdminCorpus = () => {
     setDocs((data as DocRow[]) || []);
   };
 
+  // ============================================================
+  // بارگیری مجدد اسناد هنگام تغییر فضای کاری
+  // ============================================================
   useEffect(() => {
     if (selectedSlug && workspaces.length) loadDocs(selectedSlug);
   }, [selectedSlug, workspaces]);
 
+  // ============================================================
+  // تزریق متن به Sistema RAG
+  // ============================================================
+  // متن را به قطعات کوچک‌تر تقسیم می‌کند و هر قطعه را
+  // از طریق تابع Edge (legal-ingest) در پایگاه داده ذخیره می‌کند.
+  // ============================================================
   const ingestText = async (docTitle: string, text: string) => {
     const parts = splitForIngest(text);
     let totalChunks = 0;
@@ -86,7 +127,9 @@ const AdminCorpus = () => {
     return totalChunks;
   };
 
-  // Single text-area ingest
+  // ============================================================
+  // تزریق متن از Textarea (ورودی تکی)
+  // ============================================================
   const handleIngest = async () => {
     if (!selectedSlug || !title.trim() || !rawText.trim()) {
       toast({ title: "خطا", description: "عنوان، فضای کاری و متن الزامی است", variant: "destructive" });
@@ -114,7 +157,9 @@ const AdminCorpus = () => {
     }
   };
 
-  // Extract one file into the textarea (so user can review/edit before ingest)
+  // ============================================================
+  // استخراج متن از یک فایل واحد برای بازبینی قبل از تزریق
+  // ============================================================
   const handleSingleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -138,7 +183,9 @@ const AdminCorpus = () => {
     }
   };
 
-  // Batch: extract + ingest each file as its own document
+  // ============================================================
+  // پردازش گروهی فایل‌ها: استخراج + تزریق هر فایل
+  // ============================================================
   const handleBatchFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     e.target.value = "";
@@ -180,9 +227,12 @@ const AdminCorpus = () => {
     }
   };
 
+  // ============================================================
+  // حذف سند و تمام تکه‌های embedding آن
+  // ============================================================
   const handleDelete = async (id: string) => {
     if (!confirm("این سند و همه تکه‌هایش حذف شود؟")) return;
-    // delete chunks first (FK), then doc
+    // حذف تکه‌ها (Foreign Key) قبل از حذف سند اصلی
     await supabase.from("legal_chunks").delete().eq("document_id", id);
     const { error } = await supabase.from("legal_documents").delete().eq("id", id);
     if (error) {
@@ -195,6 +245,9 @@ const AdminCorpus = () => {
 
   const busy = ingesting || extracting;
 
+  // ============================================================
+  // رابط کاربری صفحه مدیریت پایگاه دانش
+  // ============================================================
   return (
     <div className="min-h-screen gradient-section">
       <LegalHeader />
@@ -204,6 +257,7 @@ const AdminCorpus = () => {
           بازگشت
         </Link>
 
+        {/* کارت اصلی مدیریت اسناد */}
         <div className="bg-card rounded-2xl shadow-legal-lg border border-border p-6 space-y-5">
           <div>
             <h2 className="text-xl font-bold text-navy mb-1">مدیریت پایگاه دانش حقوقی</h2>
@@ -212,6 +266,7 @@ const AdminCorpus = () => {
             </p>
           </div>
 
+          {/* انتخاب فضای کاری و نوع منبع */}
           <div className="grid md:grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-navy font-bold block mb-1">فضای کاری</label>
@@ -239,7 +294,7 @@ const AdminCorpus = () => {
             </div>
           </div>
 
-          {/* Batch upload */}
+          {/* آپلود گروهی فایل‌ها */}
           <div className="bg-gold-pale border border-gold/30 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <FileUp className="w-4 h-4 text-navy" />
@@ -265,6 +320,7 @@ const AdminCorpus = () => {
             )}
           </div>
 
+          {/* عنوان سند برای ورودی تکی */}
           <div>
             <label className="text-xs text-navy font-bold block mb-1">عنوان سند (برای ورودی تکی)</label>
             <input
@@ -275,6 +331,7 @@ const AdminCorpus = () => {
             />
           </div>
 
+          {/* انتخاب فایل واحد برای بازبینی قبل از تزریق */}
           <div>
             <label className="text-xs text-navy font-bold block mb-1">
               یک فایل برای بازبینی قبل از تزریق (PDF/تصویر/متن)
@@ -295,6 +352,7 @@ const AdminCorpus = () => {
             <p className="text-[10px] text-muted-foreground mt-1">{rawText.length} کاراکتر</p>
           </div>
 
+          {/* نمایش پیشرفت عملیات */}
           {(busy && progress) && (
             <div className="flex items-center gap-2 text-xs text-navy bg-gold-pale rounded-lg p-2">
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -302,6 +360,7 @@ const AdminCorpus = () => {
             </div>
           )}
 
+          {/* دکمه تزریق نهایی */}
           <button
             onClick={handleIngest}
             disabled={busy}
@@ -321,6 +380,7 @@ const AdminCorpus = () => {
           </button>
         </div>
 
+        {/* لیست اسناد موجود در فضای کاری */}
         <div className="bg-card rounded-2xl shadow-legal border border-border p-6 mt-6">
           <h3 className="text-navy font-bold text-base mb-3">
             اسناد موجود ({docs.length})

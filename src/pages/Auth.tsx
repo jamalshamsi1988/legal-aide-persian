@@ -1,3 +1,13 @@
+// ============================================================
+// صفحه احراز هویت - ورود / ثبت‌نام کاربران
+// ============================================================
+// این صفحه برای احراز هویت کاربران طراحی شده است.
+// - کاربران می‌توانند با ایمیل و رمز عبور وارد شوند یا ثبت‌نام کنند.
+// - همچنین امکان ورود با حساب گوگل (OAuth) نیز فراهم است.
+// - پس از ورود موفق، کاربر به صفحه قبلی هدایت می‌شود.
+// - کاربران تایید‌شده با نقش "admin" می‌توانند به بخش‌های مدیریتی دسترسی داشته باشند.
+// ============================================================
+
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +20,11 @@ import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Scale } from "lucide-react";
 
+// ============================================================
+// کنترلر صفحه احراز هویت
+// ============================================================
+// حالت‌های مختلف صفحه: "signin" (ورود) یا "signup" (ثبت‌نام)
+// ============================================================
 const AuthPage = () => {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -19,18 +34,37 @@ const AuthPage = () => {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // ============================================================
+  // تعیین صفحه مقصد بعد از ورود موفق
+  // ============================================================
   const from = (location.state as any)?.from || "/";
 
+  // ============================================================
+  // نمایش لودینگ enquanto در حال بررسی وضعیت احراز هویت
+  // ============================================================
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-gold" /></div>;
   }
+
+  // ============================================================
+  // اگر کاربر قبلاً وارد شده باشد، به صفحه مقصد هدایت کن
+  // ============================================================
   if (user) return <Navigate to={from} replace />;
 
+  // ============================================================
+  // هندلر ثبت‌نام و ورود با ایمیل و رمز عبور
+  // ============================================================
+  // - در حالت ثبت‌نام: کاربر جدید ایجاد می‌شود و سپس وارد حساب می‌شود
+  // - در حالت ورود: اعتبارسنجی ایمیل و رمز عبور انجام می‌شود
+  // ============================================================
   const handleEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     try {
       if (mode === "signup") {
+        // ============================================================
+        // ثبت‌نام کاربر جدید
+        // ============================================================
         const { error } = await supabase.auth.signUp({
           email, password,
           options: {
@@ -41,6 +75,9 @@ const AuthPage = () => {
         if (error) throw error;
         toast({ title: "ثبت‌نام موفق", description: "وارد حساب خود شدید." });
       } else {
+        // ============================================================
+        // ورود کاربر موجود با ایمیل و رمز عبور
+        // ============================================================
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
@@ -51,6 +88,11 @@ const AuthPage = () => {
     }
   };
 
+  // ============================================================
+  // هندلر ورود با حساب گوگل (OAuth)
+  // ============================================================
+  // از سرویس Lovable Cloud برای احراز هویت استفاده می‌کند
+  // ============================================================
   const handleGoogle = async () => {
     setBusy(true);
     const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
@@ -60,6 +102,9 @@ const AuthPage = () => {
     }
   };
 
+  // ============================================================
+  // رابط کاربری صفحه احراز هویت
+  // ============================================================
   return (
     <div dir="rtl" className="min-h-screen flex items-center justify-center gradient-section px-4">
       <Card className="w-full max-w-md p-6 space-y-5">
@@ -68,6 +113,7 @@ const AuthPage = () => {
           <h1 className="text-2xl font-bold text-navy">{mode === "signin" ? "ورود به حساب" : "ایجاد حساب کاربری"}</h1>
         </div>
 
+        {/* دکمه ورود با گوگل */}
         <Button type="button" variant="outline" className="w-full" onClick={handleGoogle} disabled={busy}>
           ورود با گوگل
         </Button>
@@ -77,6 +123,7 @@ const AuthPage = () => {
           <div className="absolute inset-x-0 top-1/2 border-t" />
         </div>
 
+        {/* فرم ورود/ثبت‌نام با ایمیل */}
         <form onSubmit={handleEmail} className="space-y-3">
           {mode === "signup" && (
             <div>
@@ -97,6 +144,7 @@ const AuthPage = () => {
           </Button>
         </form>
 
+        {/* تغییر حالت بین ورود و ثبت‌نام */}
         <button type="button" onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="w-full text-sm text-gold hover:underline">
           {mode === "signin" ? "حساب ندارید؟ ثبت‌نام" : "حساب دارید؟ ورود"}
         </button>

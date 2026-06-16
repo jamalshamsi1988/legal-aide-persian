@@ -1,3 +1,17 @@
+// ============================================================
+// صفحه گزارش‌های ممیزی (Admin Audit Logs)
+// ============================================================
+// این صفحه برای مدیران سیستم است و لیست تمام فعالیت‌های
+// کاربران در سیستم را به صورت یک گزارش ممیزی (Audit Log) نمایش می‌دهد:
+// - همه پرس‌وجوها و تحلیل‌های حقوقی ثبت می‌شود
+// - منابع استنادی هر پرس‌وجو ذخیره می‌شود
+// - مسیریابی پیشنهادی بین فضاهای کاری ثبت می‌شود
+// - موارد مسدودشده (blocked) با دلیل مشخص ذخیره می‌شود
+// - امکان فیلتر بر اساس: همه / مسدودشده / خطاها
+// ============================================================
+// دسترسی: فقط کاربران با نقش "admin"
+// ============================================================
+
 import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,6 +19,9 @@ import { LegalHeader } from "@/components/LegalHeader";
 import { Loader2, ArrowRight, ShieldAlert, CheckCircle2, AlertTriangle, Filter } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
+// ============================================================
+// تعریف ساختار داده هر رکورد گزارش ممیزی
+// ============================================================
 interface AuditRow {
   id: string;
   user_id: string | null;
@@ -25,8 +42,14 @@ interface AuditRow {
   created_at: string;
 }
 
+// ============================================================
+// تعداد رکوردها در هر صفحه (برای پگینیشن آینده)
+// ============================================================
 const PAGE_SIZE = 50;
 
+// ============================================================
+// نمایش وضعیت هر رکورد با آیکون و رنگ مناسب
+// ============================================================
 const statusBadge = (status: string, blocked: boolean) => {
   if (blocked || status.startsWith("blocked")) {
     return (
@@ -49,12 +72,18 @@ const statusBadge = (status: string, blocked: boolean) => {
   );
 };
 
+// ============================================================
+// کامپوننت اصلی صفحه گزارش‌های ممیزی
+// ============================================================
 const AdminAudit = () => {
-  const [rows, setRows] = useState<AuditRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "blocked" | "errors">("all");
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [rows, setRows] = useState<AuditRow[]>([]);                     // لیست رکوردهای گزارش
+  const [loading, setLoading] = useState(true);                         // وضعیت بارگذاری
+  const [filter, setFilter] = useState<"all" | "blocked" | "errors">("all");  // فیلتر فعلی
+  const [expanded, setExpanded] = useState<string | null>(null);       // رکورد بازشده برای جزئیات
 
+  // ============================================================
+  // بارگیری گزارش‌ها از Supabase با اعمال فیلتر
+  // ============================================================
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -68,10 +97,14 @@ const AdminAudit = () => {
     })();
   }, [filter]);
 
+  // ============================================================
+  // رابط کاربری صفحه گزارش‌های ممیزی
+  // ============================================================
   return (
     <div className="min-h-screen bg-background">
       <LegalHeader />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* هدر صفحه با فیلترها */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-navy mb-2">
@@ -83,6 +116,7 @@ const AdminAudit = () => {
             </p>
           </div>
 
+          {/* دکمه‌های فیلتر */}
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
             {(["all", "blocked", "errors"] as const).map((f) => (
@@ -101,6 +135,7 @@ const AdminAudit = () => {
           </div>
         </div>
 
+        {/* نمایش لودینگ یا پیام خالی بودن */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-gold" />
@@ -108,6 +143,9 @@ const AdminAudit = () => {
         ) : rows.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">گزارشی یافت نشد.</div>
         ) : (
+          /* ============================================================
+             جدول گزارش‌های ممیزی
+             ============================================================ */
           <div className="bg-white rounded-lg border border-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -127,6 +165,7 @@ const AdminAudit = () => {
                     const isOpen = expanded === r.id;
                     return (
                       <Fragment key={r.id}>
+                        {/* ردیف اصلی جدول (قابل کلیک برای نمایش جزئیات) */}
                         <tr
                           className="border-t border-border hover:bg-muted/30 cursor-pointer"
                           onClick={() => setExpanded(isOpen ? null : r.id)}
@@ -150,6 +189,7 @@ const AdminAudit = () => {
                             {r.duration_ms ? `${r.duration_ms}ms` : "—"}
                           </td>
                         </tr>
+                        {/* ردیف جزئیات (با کلیک روی ردیف اصلی نمایش داده می‌شود) */}
                         {isOpen && (
                           <tr className="bg-muted/20 border-t border-border">
                             <td colSpan={7} className="p-4 space-y-2 text-xs">

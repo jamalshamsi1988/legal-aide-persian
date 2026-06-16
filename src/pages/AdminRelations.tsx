@@ -1,3 +1,17 @@
+// ============================================================
+// صفحه مدیریت روابط حقوقی (Admin Relations)
+// ============================================================
+// این صفحه برای مدیران سیستم است و امکان مدیریت روابط بین
+// اسناد حقوقی را فراهم می‌کند:
+// - افزودن رابطه بین دو سند (منبع و مقصد)
+// - تعریف نوع رابطه: ارجاع، اصلاح، نسخ، تفسیر، مرتبط، استناد شده
+// - افزودن انکر (ماده/بند) برای هر طرف رابطه
+// - افزودن یادداشت توضیحی به رابطه
+// - مشاهده و حذف روابط موجود
+// ============================================================
+// دسترسی: فقط کاربران با نقش "admin"
+// ============================================================
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Trash2, Plus, Loader2, Link2 } from "lucide-react";
@@ -5,6 +19,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { LegalHeader } from "@/components/LegalHeader";
 
+// ============================================================
+// تعریف انواع داده‌های مورد نیاز در این صفحه
+// ============================================================
 interface Workspace { id: string; slug: string; name_fa: string; }
 interface DocRow { id: string; title: string; source_type: string; }
 interface RelationRow {
@@ -17,6 +34,9 @@ interface RelationRow {
   note: string | null;
 }
 
+// ============================================================
+// انواع روابط قابل تعریف بین اسناد حقوقی
+// ============================================================
 const RELATION_TYPES = [
   { v: "REFERENCES", l: "ارجاع می‌دهد" },
   { v: "AMENDS", l: "اصلاح می‌کند" },
@@ -26,21 +46,31 @@ const RELATION_TYPES = [
   { v: "CITED_BY", l: "استناد شده توسط" },
 ];
 
+// ============================================================
+// کامپوننت اصلی مدیریت روابط حقوقی
+// ============================================================
 const AdminRelations = () => {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [selectedSlug, setSelectedSlug] = useState("");
-  const [docs, setDocs] = useState<DocRow[]>([]);
-  const [relations, setRelations] = useState<RelationRow[]>([]);
-  const [loading, setLoading] = useState(false);
+  // ============================================================
+  // Stateهای صفحه
+  // ============================================================
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);       // لیست فضاهای کاری
+  const [selectedSlug, setSelectedSlug] = useState("");                 // فضای کاری انتخاب‌شده
+  const [docs, setDocs] = useState<DocRow[]>([]);                       // لیست اسناد موجود
+  const [relations, setRelations] = useState<RelationRow[]>([]);       // لیست روابط موجود
+  const [loading, setLoading] = useState(false);                        // وضعیت بارگذاری
 
-  const [sourceId, setSourceId] = useState("");
-  const [targetId, setTargetId] = useState("");
-  const [relType, setRelType] = useState("RELATES_TO");
-  const [sourceAnchor, setSourceAnchor] = useState("");
-  const [targetAnchor, setTargetAnchor] = useState("");
-  const [note, setNote] = useState("");
-  const [saving, setSaving] = useState(false);
+  // فیلدهای فرم افزودن رابطه جدید
+  const [sourceId, setSourceId] = useState("");                         // شناسه سند مبدأ
+  const [targetId, setTargetId] = useState("");                         // شناسه سند مقصد
+  const [relType, setRelType] = useState("RELATES_TO");                  // نوع رابطه
+  const [sourceAnchor, setSourceAnchor] = useState("");                 // انکر مبدأ (ماده/بند)
+  const [targetAnchor, setTargetAnchor] = useState("");                 // انکر مقصد (ماده/بند)
+  const [note, setNote] = useState("");                                 // یادداشت توضیحی
+  const [saving, setSaving] = useState(false);                          // وضعیت ذخیره
 
+  // ============================================================
+  // بارگیری لیست فضاهای کاری از پایگاه داده
+  // ============================================================
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -52,8 +82,14 @@ const AdminRelations = () => {
     })();
   }, []);
 
+  // ============================================================
+  // پیدا کردن فضای کاری انتخاب‌شده
+  // ============================================================
   const ws = workspaces.find((w) => w.slug === selectedSlug);
 
+  // ============================================================
+  // بارگیری اسناد و روابط یک فضای کاری خاص
+  // ============================================================
   useEffect(() => {
     if (!ws) return;
     (async () => {
@@ -70,8 +106,14 @@ const AdminRelations = () => {
     })();
   }, [ws?.id]);
 
+  // ============================================================
+  // دریافت عنوان سند با شناسه
+  // ============================================================
   const docTitle = (id: string) => docs.find((d) => d.id === id)?.title || id;
 
+  // ============================================================
+  // افزودن رابطه جدید بین دو سند
+  // ============================================================
   const handleAdd = async () => {
     if (!ws || !sourceId || !targetId) {
       toast({ title: "ناقص", description: "مبدأ و مقصد را انتخاب کنید", variant: "destructive" });
@@ -96,13 +138,18 @@ const AdminRelations = () => {
       toast({ title: "خطا", description: error.message, variant: "destructive" });
       return;
     }
+    // پاک کردن فرم بعد از موفقیت
     toast({ title: "ثبت شد", description: "رابطه افزوده شد" });
     setNote(""); setSourceAnchor(""); setTargetAnchor("");
+    // بارگیری مجدد لیست روابط
     const { data: r } = await supabase.from("legal_relations").select("*")
       .eq("workspace_id", ws.id).order("created_at", { ascending: false });
     setRelations(r || []);
   };
 
+  // ============================================================
+  // حذف یک رابطه موجود
+  // ============================================================
   const handleDelete = async (id: string) => {
     if (!confirm("حذف این رابطه؟")) return;
     const { error } = await supabase.from("legal_relations").delete().eq("id", id);
@@ -110,10 +157,14 @@ const AdminRelations = () => {
     setRelations((rs) => rs.filter((r) => r.id !== id));
   };
 
+  // ============================================================
+  // رابط کاربری صفحه مدیریت روابط حقوقی
+  // ============================================================
   return (
     <div className="min-h-screen bg-background">
       <LegalHeader />
       <main className="container max-w-5xl py-8 px-4 space-y-6">
+        {/* هدر صفحه */}
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-navy flex items-center gap-2">
             <Link2 className="w-5 h-5 text-gold" /> مدیریت روابط حقوقی
@@ -123,6 +174,7 @@ const AdminRelations = () => {
           </Link>
         </div>
 
+        {/* انتخاب فضای کاری */}
         <div className="bg-card rounded-xl border border-border p-4">
           <label className="text-xs text-muted-foreground block mb-1">فضای کاری</label>
           <select
@@ -136,7 +188,7 @@ const AdminRelations = () => {
           </select>
         </div>
 
-        {/* Add form */}
+        {/* فرم افزودن رابطه جدید */}
         <div className="bg-card rounded-xl border border-border p-4 space-y-3">
           <h3 className="font-bold text-navy text-sm">افزودن رابطه جدید</h3>
           <div className="grid md:grid-cols-2 gap-3">
@@ -189,7 +241,7 @@ const AdminRelations = () => {
           </button>
         </div>
 
-        {/* Existing relations */}
+        {/* لیست روابط موجود */}
         <div className="bg-card rounded-xl border border-border p-4">
           <h3 className="font-bold text-navy text-sm mb-3">روابط موجود ({relations.length})</h3>
           {loading ? (
