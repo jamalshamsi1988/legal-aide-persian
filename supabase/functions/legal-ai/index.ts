@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const EMBEDDING_MODEL = "google/gemini-embedding-001";
-const EMBEDDING_DIMS = 1536;
+const EMBEDDING_DIMS = 3072;
 const ROUTER_MODEL = "google/gemini-2.5-flash-lite";
 
 // ============================================================
@@ -206,87 +206,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // ── Auth check FIRST (so audit log has user_id) ──────────
-    const authHeader = req.headers.get("Authorization") || "";
-    const sbUser = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData } = await sbUser.auth.getUser();
-    const user = userData?.user;
-    if (!user) {
-      await logAudit(sbAdmin, {
-        ...auditBase, status: "unauthorized",
-        error_message: "no auth", duration_ms: Date.now() - startedAt,
-      });
-      return new Response(JSON.stringify({ error: "برای استفاده از دستیار حقوقی باید وارد حساب شوید." }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    auditBase.user_id = user.id;
-
-    // ── (الف) Compliance Filter (input) ──────────────────────
-    const compliance = checkCompliance(question);
-    if (compliance.blocked) {
-      await logAudit(sbAdmin, {
-        ...auditBase, status: "blocked_input",
-        blocked: true, block_reason: compliance.reason,
-        duration_ms: Date.now() - startedAt,
-      });
-      return new Response(
-        JSON.stringify({
-          summary: "این درخواست خارج از چارچوب مجاز خدمت حقوقی است.",
-          legalBasis: [],
-          analysis:
-            `درخواست شما با خطوط قرمز قانونی (${compliance.reason}) تطبیق داده شد و قابل پاسخ‌گویی نیست. در صورت داشتن سوال حقوقی مشروع در همین حوزه، لطفاً صورت‌مسئله را با ادبیات قانونی بازنویسی کنید.`,
-          nextSteps: ["بازنویسی سوال در چارچوب قانونی", "مشاوره با وکیل دارای پروانه"],
-          draft: null,
-          sources: [],
-          blocked: true,
-          block_reason: compliance.reason,
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-<<<<<<< HEAD
-    //   const GAPGPT_API_KEY = Deno.env.get("GAPGPT_API_KEY");
-    // if (!GAPGPT_API_KEY) {
-    //   throw new Error("GAPGPT_API_KEY is not configured");
-    // }
-    // Build multimodal content array
-    const userContent: any[] = [{ type: "text", text: question }];
-=======
-
-    // ── Workspace RBAC ───────────────────────────────────────
-    if (workspace_slug) {
-      const { data: ws } = await sbAdmin.from("legal_workspaces").select("id").eq("slug", workspace_slug).maybeSingle();
-      if (!ws) {
-        await logAudit(sbAdmin, {
-          ...auditBase, status: "workspace_not_found",
-          duration_ms: Date.now() - startedAt,
-        });
-        return new Response(JSON.stringify({ error: "فضای کاری یافت نشد." }), {
-          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const [{ data: roleRow }, { data: accessRow }] = await Promise.all([
-        sbAdmin.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle(),
-        sbAdmin.from("workspace_access").select("level").eq("user_id", user.id).eq("workspace_id", ws.id).maybeSingle(),
-      ]);
-      const isAdmin = !!roleRow;
-      const hasAccess = isAdmin || !!accessRow;
-      if (!hasAccess) {
-        await logAudit(sbAdmin, {
-          ...auditBase, status: "forbidden",
-          error_message: "no workspace access", duration_ms: Date.now() - startedAt,
-        });
-        return new Response(JSON.stringify({ error: "شما به این فضای کاری دسترسی ندارید. لطفاً از ادمین درخواست دسترسی کنید." }), {
-          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
->>>>>>> c97a443cad0fd74db5c3582fb3e99b74e9424d62
-
-    // ── (ب) Context-Aware Router ─────────────────────────────
+    // ── Context-Aware Router (no auth required per TSD Phase 1) ──
     let routing: any = null;
     if (workspace_slug) {
       const { data: wsList } = await sbAdmin
@@ -364,20 +284,13 @@ serve(async (req) => {
       (detailed ? BASE_SYSTEM_PROMPT + DETAILED_EXTRA : BASE_SYSTEM_PROMPT) + contextBlock;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    // const response = await fetch("https://api.gapgpt.app/v1/chat/completions", {
       method: "POST",
       headers: {
-        // Authorization: `Bearer ${LOVABLE_API_KEY}`,
-       Authorization: `Bearer ${GAPGPT_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-<<<<<<< HEAD
-        model: "google/gemini-2.5-flash",
-        // model: "gpt-4o-mini",
-=======
         model: detailed ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash",
->>>>>>> c97a443cad0fd74db5c3582fb3e99b74e9424d62
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },

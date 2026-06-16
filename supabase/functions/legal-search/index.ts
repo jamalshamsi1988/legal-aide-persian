@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const EMBEDDING_MODEL = "google/gemini-embedding-001";
-const EMBEDDING_DIMS = 1536;
+const EMBEDDING_DIMS = 3072;
 
 export async function embedQuery(query: string, apiKey: string): Promise<number[]> {
   const res = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {

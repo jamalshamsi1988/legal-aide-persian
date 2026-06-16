@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const EMBEDDING_MODEL = "google/gemini-embedding-001";
-const EMBEDDING_DIMS = 1536;
+const EMBEDDING_DIMS = 3072;
 const CHUNK_SIZE = 1000; // characters
 const CHUNK_OVERLAP = 200;
 const BATCH_SIZE = 16;
@@ -86,27 +86,8 @@ serve(async (req) => {
       throw new Error("Server misconfigured");
     }
 
-    // Admin-only enforcement
-    const authHeader = req.headers.get("Authorization") || "";
-    const sbUser = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData } = await sbUser.auth.getUser();
-    const user = userData?.user;
-    if (!user) {
-      return new Response(JSON.stringify({ error: "ابتدا وارد شوید." }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
-    const { data: roleRow } = await supabase
-      .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
-    if (!roleRow) {
-      return new Response(JSON.stringify({ error: "فقط ادمین مجاز به افزودن سند است." }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    // Public access per TSD phase 1 — no auth required for corpus ingestion
+    // In a later phase, admin auth will be added back.
 
     // Look up workspace
     const { data: ws, error: wsErr } = await supabase
