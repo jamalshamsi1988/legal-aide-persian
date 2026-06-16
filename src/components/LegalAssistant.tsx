@@ -232,7 +232,7 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
               ) : (
                 <>
                   <FileText className="w-4 h-4 text-gold" />
-                  تحلیل ویژه — لایحه و شکایت مفصل (۲۰۰۰-۳۰۰۰ کلمه)
+                  تحلیل ویژه — لایحه و شکایت مفصل 
                 </>
               )}
             </button>
