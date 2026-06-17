@@ -199,12 +199,21 @@ serve(async (req) => {
       });
       return new Response(
         JSON.stringify({ error: "لطفاً سوال حقوقی خود را به طور کامل بنویسید." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    if (!LOVABLE_API_KEY) {
+      await logAudit(sbAdmin, {
+        ...auditBase, status: "config_error",
+        error_message: "LOVABLE_API_KEY missing", duration_ms: Date.now() - startedAt,
+      });
+      return new Response(
+        JSON.stringify({ error: "سرویس AI در حال حاضر در دسترس نیست." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     // ── Context-Aware Router (no auth required per TSD Phase 1) ──
     let routing: any = null;
@@ -304,27 +313,15 @@ serve(async (req) => {
         ...auditBase, status: `ai_error_${response.status}`,
         error_message: errText.slice(0, 500), duration_ms: Date.now() - startedAt,
       });
+      let userMessage = "خطا در ارتباط با سرویس AI. لطفاً دوباره تلاش کنید.";
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "تعداد درخواست‌ها بیش از حد مجاز است. لطفاً کمی صبر کنید." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        userMessage = "تعداد درخواست‌ها بیش از حد مجاز است. لطفاً کمی صبر کنید.";
+      } else if (response.status === 402) {
+        userMessage = "اعتبار AI به پایان رسیده. لطفاً اعتبار خود را شارژ کنید.";
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "اعتبار AI به پایان رسیده. لطفاً اعتبار خود را شارژ کنید." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      console.error("AI gateway error:", response.status, errText);
       return new Response(
-        JSON.stringify({
-          error: "AI gateway error",
-          status: response.status,
-          details: errText.slice(0, 1000),
-        }),
-        {
-          status: response.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+        JSON.stringify({ error: userMessage, status: response.status, details: errText.slice(0, 1000) }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -393,8 +390,9 @@ serve(async (req) => {
       error_message: (e instanceof Error ? e.message : String(e)).slice(0, 500),
       duration_ms: Date.now() - startedAt,
     });
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "خطای ناشناخته" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const errorMessage = e instanceof Error ? e.message : "خطای ناشناخته";
+    return new Response(JSON.stringify({ error: errorMessage, status: 500 }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
