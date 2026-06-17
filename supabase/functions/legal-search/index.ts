@@ -35,8 +35,7 @@ serve(async (req) => {
     const { workspace_slug, query, top_k } = await req.json();
     if (!workspace_slug || !query) {
       return new Response(JSON.stringify({ error: "workspace_slug و query الزامی هستند" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -61,7 +60,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("legal-search error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "خطای ناشناخته" }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

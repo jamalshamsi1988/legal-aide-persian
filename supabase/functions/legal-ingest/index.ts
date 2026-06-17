@@ -74,7 +74,7 @@ serve(async (req) => {
     if (!workspace_slug || !title || !raw_text || typeof raw_text !== "string") {
       return new Response(
         JSON.stringify({ error: "workspace_slug, title, raw_text الزامی هستند" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -98,8 +98,7 @@ serve(async (req) => {
     if (wsErr) throw wsErr;
     if (!ws) {
       return new Response(JSON.stringify({ error: "فضای کاری یافت نشد" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -150,7 +149,7 @@ serve(async (req) => {
     console.error("legal-ingest error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "خطای ناشناخته" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
