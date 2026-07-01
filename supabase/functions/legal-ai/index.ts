@@ -304,7 +304,6 @@ serve(async (req) => {
       question_length: (question || "").length,
       files_count: Array.isArray(files) ? files.length : 0,
       detailed: !!detailed,
-      user_role: providedRole || null,
     };
 
     if (!question || question.trim().length < 15) {
