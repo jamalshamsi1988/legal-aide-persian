@@ -1,4 +1,4 @@
-import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download, Library, Compass, ShieldAlert, Link2 } from "lucide-react";
+import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download, Library, Compass, ShieldAlert, Link2, UserCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateLegalPdf } from "@/lib/generatePdf";
 
