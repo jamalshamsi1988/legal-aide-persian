@@ -177,6 +177,34 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
             </div>
           )}
 
+          {/* User Role Selector */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-2 block">
+              جایگاه شما در این پرونده (برای تحلیل هدفمند‌تر):
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {ROLE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setUserRole(opt.value)}
+                  disabled={loading}
+                  title={opt.hint}
+                  className={`text-xs rounded-lg px-3 py-1.5 border transition-all duration-200 ${
+                    userRole === opt.value
+                      ? "bg-navy text-primary-foreground border-navy shadow-gold"
+                      : "bg-parchment text-navy border-border hover:border-gold hover:bg-gold-pale"
+                  } disabled:opacity-50`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              {ROLE_OPTIONS.find((r) => r.value === userRole)?.hint}
+            </p>
+          </div>
+
           {/* Textarea */}
           <div>
             <textarea
