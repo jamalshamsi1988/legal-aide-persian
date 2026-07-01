@@ -95,6 +95,22 @@ export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, s
 
   return (
     <div className="space-y-4 mt-6">
+      {/* Detected user role */}
+      {detected_role && detected_role.role !== "unknown" && (
+        <div className="rounded-xl border border-navy/20 bg-secondary p-3 flex items-center gap-3 animate-fade-in">
+          <UserCheck className="w-4 h-4 text-navy flex-shrink-0" />
+          <div className="text-xs text-navy flex-1">
+            <span className="font-bold">تحلیل بر اساس جایگاه: {detected_role.label_fa}</span>
+            {detected_role.auto && (
+              <span className="text-muted-foreground mr-2">
+                (تشخیص خودکار — اطمینان {Math.round(detected_role.confidence * 100)}%)
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+
       {/* Compliance block notice */}
       {blocked && (
         <div className="rounded-xl border border-destructive bg-red-50 p-4 flex items-start gap-3 animate-fade-in">
