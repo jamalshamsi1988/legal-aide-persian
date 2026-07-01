@@ -404,8 +404,19 @@ serve(async (req) => {
       }
     }
 
+    // ── Role Detection (explicit or auto) ──
+    const validRoles: UserRole[] = ["judge","lawyer","plaintiff","defendant","legal_expert","citizen","unknown"];
+    let roleInfo: { role: UserRole; confidence: number; reason: string; auto: boolean };
+    if (providedRole && validRoles.includes(providedRole) && providedRole !== "unknown") {
+      roleInfo = { role: providedRole, confidence: 1, reason: "کاربر صریحاً انتخاب کرد", auto: false };
+    } else {
+      const detected = await detectUserRole(question, LOVABLE_API_KEY);
+      roleInfo = { ...detected, auto: true };
+    }
+    const roleGuidance = roleSpecificGuidance(roleInfo.role);
+
     const systemPrompt =
-      (detailed ? BASE_SYSTEM_PROMPT + DETAILED_EXTRA : BASE_SYSTEM_PROMPT) + contextBlock;
+      (detailed ? BASE_SYSTEM_PROMPT + DETAILED_EXTRA : BASE_SYSTEM_PROMPT) + roleGuidance + contextBlock;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
