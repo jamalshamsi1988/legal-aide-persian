@@ -23,6 +23,14 @@ export interface RoutingHint {
   reason: string;
 }
 
+export interface DetectedRole {
+  role: string;
+  label_fa: string;
+  confidence: number;
+  reason: string;
+  auto: boolean;
+}
+
 interface LegalResultProps {
   summary: string;
   legalBasis: string[];
@@ -34,6 +42,7 @@ interface LegalResultProps {
   routing?: RoutingHint;
   blocked?: boolean;
   block_reason?: string;
+  detected_role?: DetectedRole;
 }
 
 const SectionCard = ({
