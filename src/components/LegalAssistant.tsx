@@ -108,6 +108,7 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
   const [result, setResult] = useState<LegalAnalysis | null>(null);
   const [error, setError] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [userRole, setUserRole] = useState<UserRoleValue>("auto");
 
   const handleSubmit = async (detailed: boolean = false) => {
     if (!question.trim() || question.trim().length < 15) {
