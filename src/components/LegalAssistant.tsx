@@ -53,6 +53,7 @@ const analyzeLegalQuestion = async (
   uploadedFiles: UploadedFile[],
   detailed: boolean = false,
   workspaceSlug?: string,
+  userRole: UserRoleValue = "auto",
 ): Promise<LegalAnalysis> => {
   const files = await Promise.all(
     uploadedFiles.map(async (uf) => ({
@@ -69,6 +70,7 @@ const analyzeLegalQuestion = async (
       files: files.length > 0 ? files : undefined,
       detailed,
       workspace_slug: workspaceSlug,
+      user_role: userRole === "auto" ? null : userRole,
     },
   });
 
@@ -91,6 +93,7 @@ const analyzeLegalQuestion = async (
     routing: data.routing,
     blocked: data.blocked,
     block_reason: data.block_reason,
+    detected_role: data.detected_role,
   };
 };
 
