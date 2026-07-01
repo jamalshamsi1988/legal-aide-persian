@@ -296,7 +296,7 @@ serve(async (req) => {
   };
 
   try {
-    const { question, files, detailed, workspace_slug } = await req.json();
+    const { question, files, detailed, workspace_slug, user_role: providedRole } = await req.json();
     auditBase = {
       ...auditBase,
       workspace_slug: workspace_slug || null,
@@ -304,6 +304,7 @@ serve(async (req) => {
       question_length: (question || "").length,
       files_count: Array.isArray(files) ? files.length : 0,
       detailed: !!detailed,
+      user_role: providedRole || null,
     };
 
     if (!question || question.trim().length < 15) {
