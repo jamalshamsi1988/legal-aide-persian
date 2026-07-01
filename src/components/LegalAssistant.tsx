@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Send, Loader2, RotateCcw, HelpCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { LegalResult, type LegalSource, type RoutingHint, type RelatedDocument } from "./LegalResult";
+import { LegalResult, type LegalSource, type RoutingHint, type RelatedDocument, type DetectedRole } from "./LegalResult";
 import { FileUploadZone, type UploadedFile } from "./FileUploadZone";
 
 interface LegalAnalysis {
@@ -16,7 +16,20 @@ interface LegalAnalysis {
   routing?: RoutingHint;
   blocked?: boolean;
   block_reason?: string;
+  detected_role?: DetectedRole;
 }
+
+type UserRoleValue = "auto" | "judge" | "lawyer" | "plaintiff" | "defendant" | "legal_expert" | "citizen";
+
+const ROLE_OPTIONS: { value: UserRoleValue; label: string; hint: string }[] = [
+  { value: "auto", label: "تشخیص خودکار", hint: "سیستم از روی سوال تشخیص می‌دهد" },
+  { value: "judge", label: "قاضی", hint: "خروجی به سبک پیش‌نویس رأی" },
+  { value: "lawyer", label: "وکیل", hint: "لایحه/دفاعیه تاکتیکی" },
+  { value: "plaintiff", label: "شاکی/خواهان", hint: "شکواییه و پیگیری حق" },
+  { value: "defendant", label: "خوانده/متهم", hint: "دفاعیات و ایرادات" },
+  { value: "legal_expert", label: "کارشناس/دانشجو", hint: "تحلیل دکترینی" },
+  { value: "citizen", label: "شهروند", hint: "پاسخ ساده و راهنما" },
+];
 
 const EXAMPLE_QUESTIONS = [
   "صاحب‌خانه‌ام بدون اطلاع قبلی قرارداد اجاره را فسخ کرده و مهلت تخلیه داده. آیا این کار قانونی است؟",
@@ -40,6 +53,7 @@ const analyzeLegalQuestion = async (
   uploadedFiles: UploadedFile[],
   detailed: boolean = false,
   workspaceSlug?: string,
+  userRole: UserRoleValue = "auto",
 ): Promise<LegalAnalysis> => {
   const files = await Promise.all(
     uploadedFiles.map(async (uf) => ({
@@ -56,6 +70,7 @@ const analyzeLegalQuestion = async (
       files: files.length > 0 ? files : undefined,
       detailed,
       workspace_slug: workspaceSlug,
+      user_role: userRole === "auto" ? null : userRole,
     },
   });
 
@@ -78,6 +93,7 @@ const analyzeLegalQuestion = async (
     routing: data.routing,
     blocked: data.blocked,
     block_reason: data.block_reason,
+    detected_role: data.detected_role,
   };
 };
 
@@ -92,6 +108,7 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
   const [result, setResult] = useState<LegalAnalysis | null>(null);
   const [error, setError] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [userRole, setUserRole] = useState<UserRoleValue>("auto");
 
   const handleSubmit = async (detailed: boolean = false) => {
     if (!question.trim() || question.trim().length < 15) {
@@ -102,7 +119,7 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
     setLoading(true);
     setResult(null);
     try {
-      const analysis = await analyzeLegalQuestion(question, files, detailed, workspaceSlug);
+      const analysis = await analyzeLegalQuestion(question, files, detailed, workspaceSlug, userRole);
       setResult(analysis);
     } catch (err) {
       const message = err instanceof Error ? err.message : "خطایی در پردازش سوال شما رخ داد.";
@@ -159,6 +176,34 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
               </div>
             </div>
           )}
+
+          {/* User Role Selector */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-2 block">
+              جایگاه شما در این پرونده (برای تحلیل هدفمند‌تر):
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {ROLE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setUserRole(opt.value)}
+                  disabled={loading}
+                  title={opt.hint}
+                  className={`text-xs rounded-lg px-3 py-1.5 border transition-all duration-200 ${
+                    userRole === opt.value
+                      ? "bg-navy text-primary-foreground border-navy shadow-gold"
+                      : "bg-parchment text-navy border-border hover:border-gold hover:bg-gold-pale"
+                  } disabled:opacity-50`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              {ROLE_OPTIONS.find((r) => r.value === userRole)?.hint}
+            </p>
+          </div>
 
           {/* Textarea */}
           <div>
@@ -272,6 +317,7 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
           routing={result.routing}
           blocked={result.blocked}
           block_reason={result.block_reason}
+          detected_role={result.detected_role}
         />
       )}
 

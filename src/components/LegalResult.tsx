@@ -1,4 +1,4 @@
-import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download, Library, Compass, ShieldAlert, Link2 } from "lucide-react";
+import { Scale, BookOpen, FileText, ChevronLeft, AlertCircle, Download, Library, Compass, ShieldAlert, Link2, UserCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateLegalPdf } from "@/lib/generatePdf";
 
@@ -23,6 +23,14 @@ export interface RoutingHint {
   reason: string;
 }
 
+export interface DetectedRole {
+  role: string;
+  label_fa: string;
+  confidence: number;
+  reason: string;
+  auto: boolean;
+}
+
 interface LegalResultProps {
   summary: string;
   legalBasis: string[];
@@ -34,6 +42,7 @@ interface LegalResultProps {
   routing?: RoutingHint;
   blocked?: boolean;
   block_reason?: string;
+  detected_role?: DetectedRole;
 }
 
 const SectionCard = ({
@@ -79,13 +88,29 @@ const SectionCard = ({
   );
 };
 
-export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, sources, related, routing, blocked, block_reason }: LegalResultProps) => {
+export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, sources, related, routing, blocked, block_reason, detected_role }: LegalResultProps) => {
   const handleDownload = () => {
     generateLegalPdf({ summary, legalBasis, analysis, nextSteps, draft });
   };
 
   return (
     <div className="space-y-4 mt-6">
+      {/* Detected user role */}
+      {detected_role && detected_role.role !== "unknown" && (
+        <div className="rounded-xl border border-navy/20 bg-secondary p-3 flex items-center gap-3 animate-fade-in">
+          <UserCheck className="w-4 h-4 text-navy flex-shrink-0" />
+          <div className="text-xs text-navy flex-1">
+            <span className="font-bold">تحلیل بر اساس جایگاه: {detected_role.label_fa}</span>
+            {detected_role.auto && (
+              <span className="text-muted-foreground mr-2">
+                (تشخیص خودکار — اطمینان {Math.round(detected_role.confidence * 100)}%)
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+
       {/* Compliance block notice */}
       {blocked && (
         <div className="rounded-xl border border-destructive bg-red-50 p-4 flex items-start gap-3 animate-fade-in">
