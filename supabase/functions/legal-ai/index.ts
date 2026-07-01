@@ -493,6 +493,13 @@ serve(async (req) => {
       note: r.note,
     }));
     if (routing) parsed.routing = routing;
+    parsed.detected_role = {
+      role: roleInfo.role,
+      label_fa: ROLE_LABELS_FA[roleInfo.role],
+      confidence: roleInfo.confidence,
+      reason: roleInfo.reason,
+      auto: roleInfo.auto,
+    };
 
     await logAudit(sbAdmin, {
       ...auditBase,
