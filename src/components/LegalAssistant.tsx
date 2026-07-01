@@ -16,7 +16,20 @@ interface LegalAnalysis {
   routing?: RoutingHint;
   blocked?: boolean;
   block_reason?: string;
+  detected_role?: DetectedRole;
 }
+
+type UserRoleValue = "auto" | "judge" | "lawyer" | "plaintiff" | "defendant" | "legal_expert" | "citizen";
+
+const ROLE_OPTIONS: { value: UserRoleValue; label: string; hint: string }[] = [
+  { value: "auto", label: "تشخیص خودکار", hint: "سیستم از روی سوال تشخیص می‌دهد" },
+  { value: "judge", label: "قاضی", hint: "خروجی به سبک پیش‌نویس رأی" },
+  { value: "lawyer", label: "وکیل", hint: "لایحه/دفاعیه تاکتیکی" },
+  { value: "plaintiff", label: "شاکی/خواهان", hint: "شکواییه و پیگیری حق" },
+  { value: "defendant", label: "خوانده/متهم", hint: "دفاعیات و ایرادات" },
+  { value: "legal_expert", label: "کارشناس/دانشجو", hint: "تحلیل دکترینی" },
+  { value: "citizen", label: "شهروند", hint: "پاسخ ساده و راهنما" },
+];
 
 const EXAMPLE_QUESTIONS = [
   "صاحب‌خانه‌ام بدون اطلاع قبلی قرارداد اجاره را فسخ کرده و مهلت تخلیه داده. آیا این کار قانونی است؟",
