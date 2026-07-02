@@ -164,6 +164,12 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
 
   return (
     <main className="container max-w-3xl py-8 px-4">
+      {/* History Panel */}
+      <HistoryPanel
+        workspaceSlug={workspaceSlug}
+        refreshKey={historyRefresh}
+        onSelect={handleHistorySelect}
+      />
       {/* Question Input */}
       <div className="bg-card rounded-2xl shadow-legal-lg border border-border overflow-hidden">
         <div className="bg-navy p-4 md:p-5">
