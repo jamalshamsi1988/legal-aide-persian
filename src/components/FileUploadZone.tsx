@@ -14,14 +14,14 @@ interface FileUploadZoneProps {
   maxFiles?: number;
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB per file
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 
 export const FileUploadZone = ({
   files,
   onFilesChange,
   disabled = false,
-  maxFiles = 50,
+  maxFiles = 100,
 }: FileUploadZoneProps) => {
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -40,7 +40,7 @@ export const FileUploadZone = ({
           continue;
         }
         if (file.size > MAX_FILE_SIZE) {
-          errors.push(`${file.name}: حجم بیش از ۱۰ مگابایت`);
+          errors.push(`${file.name}: حجم بیش از ۲۵ مگابایت`);
           continue;
         }
 
@@ -110,7 +110,7 @@ export const FileUploadZone = ({
           عکس یا فایل PDF را اینجا بکشید یا کلیک کنید
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          حداکثر {maxFiles} فایل • JPG, PNG, WEBP, PDF • هر فایل تا ۱۰ مگابایت
+          حداکثر {maxFiles} فایل • JPG, PNG, WEBP, PDF • هر فایل تا ۲۵ مگابایت
         </p>
       </div>
 
