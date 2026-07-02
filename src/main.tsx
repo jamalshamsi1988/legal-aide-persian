@@ -1,30 +1,9 @@
-// ============================================================
-// نقطه ورود اصلی اپلیکیشن
-// ============================================================
-// اپلیکیشن را با Providerهای لازم بسته می‌کند:
-// - AuthProvider: مدیریت احراز هویت سراسری
-// ============================================================
-
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
-import { AuthProvider } from "./hooks/useAuth";
 import "./index.css";
 
-// ============================================================
-// رندر کردن اپلیکیشن با پوشش AuthProvider
-// ============================================================
-// AuthProvider باید تمام اپلیکیشن را در بر گیرد تا
-// هوک useAuth در همه کامپوننت‌ها در دسترس باشد.
-// ============================================================
-createRoot(document.getElementById("root")!).render(
-  <AuthProvider>
-    <App />
-  </AuthProvider>
-);
+createRoot(document.getElementById("root")!).render(<App />);
 
-// ============================================================
-// ثبت Service Worker برای PWA (در صورت وجود)
-// ============================================================
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {});

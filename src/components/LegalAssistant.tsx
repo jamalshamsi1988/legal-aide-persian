@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { LegalResult, type LegalSource, type RoutingHint, type RelatedDocument, type DetectedRole } from "./LegalResult";
 import { FileUploadZone, type UploadedFile } from "./FileUploadZone";
+import { HistoryPanel, saveHistoryItem, type HistoryItem } from "./HistoryPanel";
 
 interface LegalAnalysis {
   summary: string;
@@ -109,6 +110,7 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
   const [error, setError] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [userRole, setUserRole] = useState<UserRoleValue>("auto");
+  const [historyRefresh, setHistoryRefresh] = useState(0);
 
   const handleSubmit = async (detailed: boolean = false) => {
     if (!question.trim() || question.trim().length < 15) {
@@ -121,6 +123,15 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
     try {
       const analysis = await analyzeLegalQuestion(question, files, detailed, workspaceSlug, userRole);
       setResult(analysis);
+      // ذخیره خودکار در تاریخچه
+      saveHistoryItem({
+        workspaceSlug,
+        workspaceName,
+        question,
+        detailed,
+        result: analysis,
+      });
+      setHistoryRefresh((n) => n + 1);
     } catch (err) {
       const message = err instanceof Error ? err.message : "خطایی در پردازش سوال شما رخ داد.";
       setError(message);
@@ -144,8 +155,21 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
     setError("");
   };
 
+  const handleHistorySelect = (item: HistoryItem) => {
+    setQuestion(item.question);
+    setResult(item.result);
+    setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <main className="container max-w-3xl py-8 px-4">
+      {/* History Panel */}
+      <HistoryPanel
+        workspaceSlug={workspaceSlug}
+        refreshKey={historyRefresh}
+        onSelect={handleHistorySelect}
+      />
       {/* Question Input */}
       <div className="bg-card rounded-2xl shadow-legal-lg border border-border overflow-hidden">
         <div className="bg-navy p-4 md:p-5">
@@ -230,7 +254,7 @@ export const LegalAssistant = ({ workspaceSlug, workspaceName }: LegalAssistantP
             files={files}
             onFilesChange={setFiles}
             disabled={loading}
-            maxFiles={50}
+            maxFiles={100}
           />
 
           {/* Action buttons */}
