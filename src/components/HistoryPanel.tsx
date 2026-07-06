@@ -1,8 +1,5 @@
-// ============================================================
-// تاریخچه تحلیل‌های حقوقی — ذخیره‌سازی در localStorage
-// ============================================================
-import { useEffect, useState } from "react";
-import { History, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { History, Trash2, ChevronDown, ChevronUp, Search, X, Calendar, Filter } from "lucide-react";
 
 export interface HistoryItem {
   id: string;
@@ -78,18 +75,65 @@ function fmtDate(ts: number): string {
   }
 }
 
+function dateToTimestamp(dateStr: string, endOfDay: boolean): number | null {
+  if (!dateStr) return null;
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return null;
+  if (endOfDay) {
+    date.setHours(23, 59, 59, 999);
+  } else {
+    date.setHours(0, 0, 0, 0);
+  }
+  return date.getTime();
+}
+
 export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPanelProps) => {
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [open, setOpen] = useState(false);
   const [scope, setScope] = useState<"this" | "all">(workspaceSlug ? "this" : "all");
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     setItems(loadHistory());
   }, [refreshKey]);
 
-  const filtered = scope === "this" && workspaceSlug
-    ? items.filter((i) => i.workspaceSlug === workspaceSlug)
-    : items;
+  const roleOptions = useMemo(() => {
+    const roles = new Map<string, string>();
+    items.forEach((item) => {
+      const role = item.result?.detected_role;
+      if (role?.role) {
+        roles.set(role.role, role.label_fa || role.role);
+      }
+    });
+    return Array.from(roles.entries()).sort((a, b) => a[1].localeCompare(b[1], "fa-IR"));
+  }, [items]);
+
+  const filtered = useMemo(() => {
+    const fromTs = dateToTimestamp(dateFrom, false);
+    const toTs = dateToTimestamp(dateTo, true);
+    const query = search.trim().toLowerCase();
+
+    return items.filter((item) => {
+      if (scope === "this" && workspaceSlug && item.workspaceSlug !== workspaceSlug) return false;
+      if (query && !item.question.toLowerCase().includes(query)) return false;
+      if (roleFilter !== "all" && item.result?.detected_role?.role !== roleFilter) return false;
+      if (fromTs && item.createdAt < fromTs) return false;
+      if (toTs && item.createdAt > toTs) return false;
+      return true;
+    });
+  }, [items, scope, workspaceSlug, search, roleFilter, dateFrom, dateTo]);
+
+  const hasActiveFilters = search || roleFilter !== "all" || dateFrom || dateTo;
+
+  const clearFilters = () => {
+    setSearch("");
+    setRoleFilter("all");
+    setDateFrom("");
+    setDateTo("");
+  };
 
   const handleDelete = (id: string) => {
     deleteHistoryItem(id);
@@ -119,35 +163,123 @@ export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPan
 
       {open && (
         <div className="p-4 border-t border-border space-y-3">
-          {workspaceSlug && (
-            <div className="flex items-center gap-2 text-xs">
-              <button
-                onClick={() => setScope("this")}
-                className={`rounded-lg px-3 py-1 border transition-colors ${
-                  scope === "this"
-                    ? "bg-navy text-primary-foreground border-navy"
-                    : "bg-parchment text-navy border-border hover:border-gold"
-                }`}
+          {/* Scope + search */}
+          <div className="space-y-2">
+            {workspaceSlug && (
+              <div className="flex items-center gap-2 text-xs">
+                <button
+                  onClick={() => setScope("this")}
+                  className={`rounded-lg px-3 py-1 border transition-colors ${
+                    scope === "this"
+                      ? "bg-navy text-primary-foreground border-navy"
+                      : "bg-parchment text-navy border-border hover:border-gold"
+                  }`}
+                >
+                  این فضای کاری
+                </button>
+                <button
+                  onClick={() => setScope("all")}
+                  className={`rounded-lg px-3 py-1 border transition-colors ${
+                    scope === "all"
+                      ? "bg-navy text-primary-foreground border-navy"
+                      : "bg-parchment text-navy border-border hover:border-gold"
+                  }`}
+                >
+                  همه فضاها
+                </button>
+                <span className="mr-auto text-muted-foreground">{filtered.length} مورد</span>
+              </div>
+            )}
+
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="جستجو در عنوان/سوال..."
+                className="w-full bg-parchment border border-border rounded-xl pr-9 pl-9 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold transition-all placeholder:text-muted-foreground font-vazir"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="flex-1 min-w-[140px] space-y-1">
+              <label className="text-[11px] text-muted-foreground flex items-center gap-1">
+                <Filter className="w-3 h-3" />
+                نقش تشخیص‌داده‌شده
+              </label>
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="w-full bg-parchment border border-border rounded-xl px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold font-vazir"
               >
-                این فضای کاری
-              </button>
+                <option value="all">همه نقش‌ها</option>
+                {roleOptions.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex-1 min-w-[120px] space-y-1">
+              <label className="text-[11px] text-muted-foreground flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                از تاریخ
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full bg-parchment border border-border rounded-xl px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold font-vazir"
+              />
+            </div>
+
+            <div className="flex-1 min-w-[120px] space-y-1">
+              <label className="text-[11px] text-muted-foreground flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                تا تاریخ
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full bg-parchment border border-border rounded-xl px-3 py-2 text-xs text-navy focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold font-vazir"
+              />
+            </div>
+
+            {hasActiveFilters && (
               <button
-                onClick={() => setScope("all")}
-                className={`rounded-lg px-3 py-1 border transition-colors ${
-                  scope === "all"
-                    ? "bg-navy text-primary-foreground border-navy"
-                    : "bg-parchment text-navy border-border hover:border-gold"
-                }`}
+                onClick={clearFilters}
+                className="flex items-center gap-1 text-xs text-destructive hover:bg-destructive/10 rounded-lg px-2 py-2 transition-colors"
               >
-                همه فضاها
+                <X className="w-3.5 h-3.5" />
+                پاک کردن فیلترها
               </button>
-              <span className="mr-auto text-muted-foreground">{filtered.length} مورد</span>
+            )}
+          </div>
+
+          {!workspaceSlug && (
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{filtered.length} مورد</span>
             </div>
           )}
 
           {filtered.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-4">
-              هنوز تحلیلی ذخیره نشده. پس از هر تحلیل به‌طور خودکار اینجا نگه‌داری می‌شود.
+              {items.length === 0
+                ? "هنوز تحلیلی ذخیره نشده. پس از هر تحلیل به‌طور خودکار اینجا نگه‌داری می‌شود."
+                : "موردی با فیلترهای انتخاب‌شده یافت نشد."}
             </p>
           ) : (
             <ul className="space-y-2 max-h-80 overflow-y-auto scrollbar-thin">
@@ -156,16 +288,14 @@ export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPan
                   key={h.id}
                   className="flex items-start gap-2 p-2.5 bg-parchment rounded-lg border border-border hover:border-gold transition-colors"
                 >
-                  <button
-                    onClick={() => onSelect(h)}
-                    className="flex-1 text-right"
-                  >
-                    <p className="text-xs text-navy line-clamp-2 leading-relaxed">
-                      {h.question}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                  <button onClick={() => onSelect(h)} className="flex-1 text-right">
+                    <p className="text-xs text-navy line-clamp-2 leading-relaxed">{h.question}</p>
+                    <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground flex-wrap">
                       <span>{fmtDate(h.createdAt)}</span>
                       {h.workspaceName && <span>• {h.workspaceName}</span>}
+                      {h.result?.detected_role?.label_fa && (
+                        <span className="text-gold font-bold">• {h.result.detected_role.label_fa}</span>
+                      )}
                       {h.detailed && <span className="text-gold font-bold">• تحلیل ویژه</span>}
                     </div>
                   </button>
@@ -194,3 +324,4 @@ export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPan
     </div>
   );
 };
+
