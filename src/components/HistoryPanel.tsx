@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { History, Trash2, ChevronDown, ChevronUp, Search, X, Calendar, Filter } from "lucide-react";
+import { History, Trash2, ChevronDown, ChevronUp, Search, X, Calendar, Filter, Eye, Scale, BookOpen, ChevronLeft, Send } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export interface HistoryItem {
   id: string;
@@ -95,6 +96,7 @@ export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPan
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [detailItem, setDetailItem] = useState<HistoryItem | null>(null);
 
   useEffect(() => {
     setItems(loadHistory());
@@ -288,7 +290,7 @@ export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPan
                   key={h.id}
                   className="flex items-start gap-2 p-2.5 bg-parchment rounded-lg border border-border hover:border-gold transition-colors"
                 >
-                  <button onClick={() => onSelect(h)} className="flex-1 text-right">
+                  <button onClick={() => setDetailItem(h)} className="flex-1 text-right">
                     <p className="text-xs text-navy line-clamp-2 leading-relaxed">{h.question}</p>
                     <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground flex-wrap">
                       <span>{fmtDate(h.createdAt)}</span>
@@ -298,6 +300,13 @@ export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPan
                       )}
                       {h.detailed && <span className="text-gold font-bold">• تحلیل ویژه</span>}
                     </div>
+                  </button>
+                  <button
+                    onClick={() => setDetailItem(h)}
+                    className="p-1.5 text-navy hover:bg-gold-pale rounded-md"
+                    title="مشاهده جزئیات"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => handleDelete(h.id)}
@@ -321,6 +330,93 @@ export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPan
           )}
         </div>
       )}
+
+      {/* Details Dialog */}
+      <Dialog open={!!detailItem} onOpenChange={(o) => !o && setDetailItem(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto font-vazir" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-navy text-base text-right">جزئیات تحلیل حقوقی</DialogTitle>
+          </DialogHeader>
+          {detailItem && (
+            <div className="space-y-4 text-right">
+              <div className="text-[11px] text-muted-foreground flex flex-wrap gap-2">
+                <span>{fmtDate(detailItem.createdAt)}</span>
+                {detailItem.workspaceName && <span>• {detailItem.workspaceName}</span>}
+                {detailItem.result?.detected_role?.label_fa && (
+                  <span className="text-gold font-bold">• {detailItem.result.detected_role.label_fa}</span>
+                )}
+                {detailItem.detailed && <span className="text-gold font-bold">• تحلیل ویژه</span>}
+              </div>
+
+              <div className="bg-parchment rounded-lg p-3 border border-border">
+                <p className="text-[11px] text-muted-foreground mb-1">سوال کاربر:</p>
+                <p className="text-sm text-navy leading-relaxed">{detailItem.question}</p>
+              </div>
+
+              {detailItem.result?.summary && (
+                <div className="rounded-xl border border-border border-r-4 border-r-navy bg-secondary p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Scale className="w-4 h-4 text-navy" />
+                    <h4 className="text-navy font-bold text-sm">خلاصه پرونده</h4>
+                  </div>
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+                    {detailItem.result.summary}
+                  </p>
+                </div>
+              )}
+
+              {Array.isArray(detailItem.result?.legalBasis) && detailItem.result.legalBasis.length > 0 && (
+                <div className="rounded-xl border border-border border-r-4 border-r-gold bg-gold-pale p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen className="w-4 h-4 text-gold" />
+                    <h4 className="text-navy font-bold text-sm">مبانی قانونی مرتبط</h4>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {detailItem.result.legalBasis.map((item: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <ChevronLeft className="w-4 h-4 text-gold flex-shrink-0 mt-0.5" />
+                        <span className="text-foreground leading-relaxed">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {detailItem.result?.analysis && (
+                <div className="rounded-xl border border-border border-r-4 border-r-navy bg-secondary p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Scale className="w-4 h-4 text-navy" />
+                    <h4 className="text-navy font-bold text-sm">تحلیل حقوقی</h4>
+                  </div>
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+                    {detailItem.result.analysis}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="sm:justify-start gap-2">
+            <button
+              onClick={() => {
+                if (detailItem) {
+                  onSelect(detailItem);
+                  setDetailItem(null);
+                }
+              }}
+              className="flex items-center gap-2 gradient-gold text-navy font-bold rounded-xl px-4 py-2 text-sm shadow-gold hover:opacity-90 transition-all"
+            >
+              <Send className="w-4 h-4" />
+              بارگذاری کامل در تحلیل‌گر
+            </button>
+            <button
+              onClick={() => setDetailItem(null)}
+              className="bg-secondary text-navy border border-border rounded-xl px-4 py-2 text-sm hover:bg-muted transition-colors"
+            >
+              بستن
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
