@@ -96,6 +96,7 @@ export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPan
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [detailItem, setDetailItem] = useState<HistoryItem | null>(null);
 
   useEffect(() => {
     setItems(loadHistory());
