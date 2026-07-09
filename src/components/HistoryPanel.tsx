@@ -396,7 +396,7 @@ export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPan
               )}
             </div>
           )}
-          <DialogFooter className="sm:justify-start gap-2">
+          <DialogFooter className="sm:justify-start gap-2 flex-wrap">
             <button
               onClick={() => {
                 if (detailItem) {
@@ -408,6 +408,20 @@ export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPan
             >
               <Send className="w-4 h-4" />
               بارگذاری کامل در تحلیل‌گر
+            </button>
+            <button
+              onClick={() => detailItem && downloadHistoryPdf(detailItem)}
+              className="flex items-center gap-2 bg-navy text-primary-foreground rounded-xl px-4 py-2 text-sm hover:bg-navy/90 transition-colors border border-gold/30"
+            >
+              <FileDown className="w-4 h-4 text-gold" />
+              دانلود PDF
+            </button>
+            <button
+              onClick={() => detailItem && downloadHistoryTxt(detailItem)}
+              className="flex items-center gap-2 bg-parchment text-navy border border-border rounded-xl px-4 py-2 text-sm hover:border-gold transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              دانلود متن (TXT)
             </button>
             <button
               onClick={() => setDetailItem(null)}
