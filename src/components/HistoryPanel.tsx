@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { History, Trash2, ChevronDown, ChevronUp, Search, X, Calendar, Filter, Eye, Scale, BookOpen, ChevronLeft, Send } from "lucide-react";
+import { History, Trash2, ChevronDown, ChevronUp, Search, X, Calendar, Filter, Eye, Scale, BookOpen, ChevronLeft, Send, FileDown, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { generateLegalPdf } from "@/lib/generatePdf";
 
 export interface HistoryItem {
   id: string;
@@ -87,6 +88,78 @@ function dateToTimestamp(dateStr: string, endOfDay: boolean): number | null {
   }
   return date.getTime();
 }
+
+function safeFileName(str: string, max = 60): string {
+  const base = (str || "legal-history")
+    .replace(/[\\/:*?"<>|\n\r\t]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+  return base || "legal-history";
+}
+
+function downloadHistoryPdf(item: HistoryItem) {
+  const r = item.result || {};
+  generateLegalPdf({
+    summary: r.summary || "",
+    legalBasis: Array.isArray(r.legalBasis) ? r.legalBasis : [],
+    analysis: r.analysis || "",
+    nextSteps: Array.isArray(r.nextSteps) ? r.nextSteps : [],
+    draft: r.draft || null,
+  });
+}
+
+function downloadHistoryTxt(item: HistoryItem) {
+  const r = item.result || {};
+  const lines: string[] = [];
+  lines.push("⚖️ تحلیل حقوقی");
+  lines.push(`تاریخ: ${fmtDate(item.createdAt)}`);
+  if (item.workspaceName) lines.push(`فضای کاری: ${item.workspaceName}`);
+  if (r.detected_role?.label_fa) lines.push(`جایگاه: ${r.detected_role.label_fa}`);
+  if (item.detailed) lines.push("نوع: تحلیل ویژه");
+  lines.push("");
+  lines.push("── سوال کاربر ──");
+  lines.push(item.question || "");
+  lines.push("");
+  if (r.summary) {
+    lines.push("── خلاصه پرونده ──");
+    lines.push(r.summary);
+    lines.push("");
+  }
+  if (Array.isArray(r.legalBasis) && r.legalBasis.length) {
+    lines.push("── مبانی قانونی مرتبط ──");
+    r.legalBasis.forEach((b: string, i: number) => lines.push(`${i + 1}. ${b}`));
+    lines.push("");
+  }
+  if (r.analysis) {
+    lines.push("── تحلیل حقوقی ──");
+    lines.push(r.analysis);
+    lines.push("");
+  }
+  if (Array.isArray(r.nextSteps) && r.nextSteps.length) {
+    lines.push("── پیشنهاد اقدام بعدی ──");
+    r.nextSteps.forEach((s: string, i: number) => lines.push(`${i + 1}. ${s}`));
+    lines.push("");
+  }
+  if (r.draft) {
+    lines.push("── پیش‌نویس لایحه رسمی ──");
+    lines.push(r.draft);
+    lines.push("");
+  }
+  lines.push("────────────────");
+  lines.push("⚖️ اطلاعات ارائه شده جنبه آموزشی دارد و جایگزین مشاوره حقوقی تخصصی نمی‌شود.");
+
+  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${safeFileName(item.question)}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 
 export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPanelProps) => {
   const [items, setItems] = useState<HistoryItem[]>([]);
@@ -395,7 +468,7 @@ export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPan
               )}
             </div>
           )}
-          <DialogFooter className="sm:justify-start gap-2">
+          <DialogFooter className="sm:justify-start gap-2 flex-wrap">
             <button
               onClick={() => {
                 if (detailItem) {
@@ -407,6 +480,20 @@ export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPan
             >
               <Send className="w-4 h-4" />
               بارگذاری کامل در تحلیل‌گر
+            </button>
+            <button
+              onClick={() => detailItem && downloadHistoryPdf(detailItem)}
+              className="flex items-center gap-2 bg-navy text-primary-foreground rounded-xl px-4 py-2 text-sm hover:bg-navy/90 transition-colors border border-gold/30"
+            >
+              <FileDown className="w-4 h-4 text-gold" />
+              دانلود PDF
+            </button>
+            <button
+              onClick={() => detailItem && downloadHistoryTxt(detailItem)}
+              className="flex items-center gap-2 bg-parchment text-navy border border-border rounded-xl px-4 py-2 text-sm hover:border-gold transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              دانلود متن (TXT)
             </button>
             <button
               onClick={() => setDetailItem(null)}
