@@ -89,6 +89,78 @@ function dateToTimestamp(dateStr: string, endOfDay: boolean): number | null {
   return date.getTime();
 }
 
+function safeFileName(str: string, max = 60): string {
+  const base = (str || "legal-history")
+    .replace(/[\\/:*?"<>|\n\r\t]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+  return base || "legal-history";
+}
+
+function downloadHistoryPdf(item: HistoryItem) {
+  const r = item.result || {};
+  generateLegalPdf({
+    summary: r.summary || "",
+    legalBasis: Array.isArray(r.legalBasis) ? r.legalBasis : [],
+    analysis: r.analysis || "",
+    nextSteps: Array.isArray(r.nextSteps) ? r.nextSteps : [],
+    draft: r.draft || null,
+  });
+}
+
+function downloadHistoryTxt(item: HistoryItem) {
+  const r = item.result || {};
+  const lines: string[] = [];
+  lines.push("⚖️ تحلیل حقوقی");
+  lines.push(`تاریخ: ${fmtDate(item.createdAt)}`);
+  if (item.workspaceName) lines.push(`فضای کاری: ${item.workspaceName}`);
+  if (r.detected_role?.label_fa) lines.push(`جایگاه: ${r.detected_role.label_fa}`);
+  if (item.detailed) lines.push("نوع: تحلیل ویژه");
+  lines.push("");
+  lines.push("── سوال کاربر ──");
+  lines.push(item.question || "");
+  lines.push("");
+  if (r.summary) {
+    lines.push("── خلاصه پرونده ──");
+    lines.push(r.summary);
+    lines.push("");
+  }
+  if (Array.isArray(r.legalBasis) && r.legalBasis.length) {
+    lines.push("── مبانی قانونی مرتبط ──");
+    r.legalBasis.forEach((b: string, i: number) => lines.push(`${i + 1}. ${b}`));
+    lines.push("");
+  }
+  if (r.analysis) {
+    lines.push("── تحلیل حقوقی ──");
+    lines.push(r.analysis);
+    lines.push("");
+  }
+  if (Array.isArray(r.nextSteps) && r.nextSteps.length) {
+    lines.push("── پیشنهاد اقدام بعدی ──");
+    r.nextSteps.forEach((s: string, i: number) => lines.push(`${i + 1}. ${s}`));
+    lines.push("");
+  }
+  if (r.draft) {
+    lines.push("── پیش‌نویس لایحه رسمی ──");
+    lines.push(r.draft);
+    lines.push("");
+  }
+  lines.push("────────────────");
+  lines.push("⚖️ اطلاعات ارائه شده جنبه آموزشی دارد و جایگزین مشاوره حقوقی تخصصی نمی‌شود.");
+
+  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${safeFileName(item.question)}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+
 export const HistoryPanel = ({ workspaceSlug, refreshKey, onSelect }: HistoryPanelProps) => {
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [open, setOpen] = useState(false);
