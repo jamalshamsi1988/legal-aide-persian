@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { History, Trash2, ChevronDown, ChevronUp, Search, X, Calendar, Filter, Eye, Scale, BookOpen, ChevronLeft, Send } from "lucide-react";
+import { History, Trash2, ChevronDown, ChevronUp, Search, X, Calendar, Filter, Eye, Scale, BookOpen, ChevronLeft, Send, FileDown, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { generateLegalPdf } from "@/lib/generatePdf";
 
 export interface HistoryItem {
   id: string;
