@@ -243,9 +243,13 @@ export const generateLegalPdf = (data: LegalPdfData) => {
   @media print {
     body { padding: 0; }
     .no-print { display: none !important; }
-    section { page-break-inside: avoid; }
-    h2 { page-break-after: avoid; }
+    /* Do NOT force page-break-inside:avoid on <section> — long analysis or
+       summary sections would overflow and the browser reprints the section
+       from the top on the next page, duplicating content. */
+    h2 { page-break-after: avoid; break-after: avoid-page; }
+    .source-item, .related-item, .question-box .label + p { page-break-inside: avoid; break-inside: avoid; }
   }
+
 </style>
 </head>
 <body>
