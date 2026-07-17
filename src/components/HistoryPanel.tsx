@@ -106,6 +106,12 @@ function downloadHistoryPdf(item: HistoryItem) {
     analysis: r.analysis || "",
     nextSteps: Array.isArray(r.nextSteps) ? r.nextSteps : [],
     draft: r.draft || null,
+    question: item.question,
+    workspaceName: item.workspaceName,
+    roleLabel: r.detected_role?.label_fa,
+    detailed: item.detailed,
+    sources: Array.isArray(r.sources) ? r.sources : undefined,
+    related: Array.isArray(r.related) ? r.related : undefined,
   });
 }
 

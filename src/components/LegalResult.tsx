@@ -90,7 +90,16 @@ const SectionCard = ({
 
 export const LegalResult = ({ summary, legalBasis, analysis, nextSteps, draft, sources, related, routing, blocked, block_reason, detected_role }: LegalResultProps) => {
   const handleDownload = () => {
-    generateLegalPdf({ summary, legalBasis, analysis, nextSteps, draft });
+    generateLegalPdf({
+      summary,
+      legalBasis,
+      analysis,
+      nextSteps,
+      draft,
+      roleLabel: detected_role?.label_fa,
+      sources,
+      related,
+    });
   };
 
   return (
