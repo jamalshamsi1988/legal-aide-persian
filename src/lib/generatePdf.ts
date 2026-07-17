@@ -107,6 +107,7 @@ export const generateLegalPdf = (data: LegalPdfData) => {
     border-radius: 8px;
     padding: 12px 16px;
     margin-bottom: 20px;
+    break-inside: auto;
   }
   .question-box .label {
     font-size: 11px;
@@ -117,9 +118,19 @@ export const generateLegalPdf = (data: LegalPdfData) => {
     font-size: 13px;
     color: #0f1b3d;
     text-align: justify;
+    orphans: 3;
+    widows: 3;
   }
 
-  section { margin-bottom: 18px; page-break-inside: avoid; }
+  /* Sections must be allowed to break across pages (long analysis/summary
+     otherwise overflows and the browser reprints from the top on the next
+     page, producing duplicated content). Keep only the heading with the
+     first lines. */
+  section {
+    margin-bottom: 18px;
+    break-inside: auto;
+    page-break-inside: auto;
+  }
   h2 {
     font-size: 15px;
     color: #0f1b3d;
@@ -130,6 +141,10 @@ export const generateLegalPdf = (data: LegalPdfData) => {
     display: flex;
     align-items: center;
     gap: 6px;
+    break-after: avoid-page;
+    page-break-after: avoid;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
   h2::before {
     content: '';
@@ -139,7 +154,14 @@ export const generateLegalPdf = (data: LegalPdfData) => {
     border-radius: 50%;
   }
 
-  p, li { text-align: justify; }
+  p, li {
+    text-align: justify;
+    orphans: 3;
+    widows: 3;
+    /* Break long unbroken tokens (URLs, article refs) instead of overflowing. */
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
   p { margin-bottom: 8px; }
 
   ul, ol {
@@ -147,7 +169,12 @@ export const generateLegalPdf = (data: LegalPdfData) => {
     padding-left: 0;
     margin-bottom: 8px;
   }
-  li { margin-bottom: 6px; }
+  li {
+    margin-bottom: 6px;
+    /* Keep a single list item together when it fits on a page. */
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
   ol li::marker, ul li::marker { color: #c9a84c; font-weight: 700; }
 
   .draft-box {
@@ -161,6 +188,21 @@ export const generateLegalPdf = (data: LegalPdfData) => {
     font-size: 12.5px;
     line-height: 2;
     color: #1a2340;
+    /* Long pleadings can exceed a page; allow natural pagination. */
+    break-inside: auto;
+    page-break-inside: auto;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .source-item,
+  .related-item {
+    /* Each citation stays intact on one page if it fits; otherwise the
+       browser will still paginate rather than duplicating. */
+    break-inside: avoid;
+    page-break-inside: avoid;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .source-item {
@@ -168,6 +210,7 @@ export const generateLegalPdf = (data: LegalPdfData) => {
     border: 1px solid #e6d38a;
     border-radius: 6px;
     padding: 8px 12px;
+
     margin-bottom: 8px;
     font-size: 12px;
   }
