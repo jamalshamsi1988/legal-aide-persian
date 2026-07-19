@@ -1,44 +1,74 @@
-import { Scale, Gavel, BookOpen, Shield, ShieldCheck } from "lucide-react";
+import { Scale, Gavel, BookOpen, Shield, ShieldCheck, LogOut, User as UserIcon, Coins } from "lucide-react";
 import legalHero from "@/assets/legal-hero.jpg";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-
+import { useAuth } from "@/hooks/useAuth";
 
 export const LegalHeader = () => {
+  const { user, isAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <header className="relative overflow-hidden">
-      {/* Top bar — auth removed; admin tools always accessible */}
-      <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-end gap-2 p-3">
-        <Link to="/admin/corpus">
-          <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
-            <ShieldCheck className="w-4 h-4 ml-1" /> پایگاه دانش
-          </Button>
-        </Link>
-        <Link to="/admin/audit">
-          <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
-            <ShieldCheck className="w-4 h-4 ml-1" /> گزارش‌ها
-          </Button>
-        </Link>
-        <Link to="/admin/relations">
-          <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
-            <ShieldCheck className="w-4 h-4 ml-1" /> روابط
-          </Button>
-        </Link>
+      {/* Top bar */}
+      <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-end gap-2 p-3 flex-wrap">
+        {user ? (
+          <>
+            <Link to="/account">
+              <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
+                <Coins className="w-4 h-4 ml-1 text-gold" /> حساب من
+              </Button>
+            </Link>
+            {isAdmin && (
+              <>
+                <Link to="/admin/corpus">
+                  <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
+                    <ShieldCheck className="w-4 h-4 ml-1" /> پایگاه دانش
+                  </Button>
+                </Link>
+                <Link to="/admin/audit">
+                  <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
+                    <ShieldCheck className="w-4 h-4 ml-1" /> گزارش‌ها
+                  </Button>
+                </Link>
+                <Link to="/admin/relations">
+                  <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
+                    <ShieldCheck className="w-4 h-4 ml-1" /> روابط
+                  </Button>
+                </Link>
+              </>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => { await signOut(); navigate("/"); }}
+              className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20"
+            >
+              <LogOut className="w-4 h-4 ml-1" /> خروج
+            </Button>
+          </>
+        ) : (
+          <>
+            <Link to="/auth">
+              <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-primary-foreground hover:bg-white/20">
+                <UserIcon className="w-4 h-4 ml-1" /> ورود
+              </Button>
+            </Link>
+            <Link to="/auth?mode=signup">
+              <Button size="sm" className="gradient-gold text-navy font-bold hover:opacity-90">
+                ثبت‌نام رایگان
+              </Button>
+            </Link>
+          </>
+        )}
       </div>
 
-      {/* Hero background */}
       <div className="absolute inset-0">
-        <img
-          src={legalHero}
-          alt="دفتر حقوقی"
-          className="w-full h-full object-cover"
-        />
+        <img src={legalHero} alt="دفتر حقوقی" className="w-full h-full object-cover" />
         <div className="absolute inset-0 gradient-hero opacity-90" />
       </div>
 
-      {/* Content */}
       <div className="relative z-10 container py-10 md:py-16 text-center">
-        {/* Logo badge */}
         <div className="inline-flex items-center gap-2 bg-gold/20 border border-gold/40 rounded-full px-4 py-1.5 mb-6">
           <Scale className="w-4 h-4 text-gold" />
           <span className="text-gold text-sm font-medium">دستیار حقوقی هوشمند</span>
@@ -53,7 +83,6 @@ export const LegalHeader = () => {
           مستند، دقیق و قابل ارائه به مراجع قضایی.
         </p>
 
-        {/* Feature pills */}
         <div className="flex flex-wrap justify-center gap-3 mt-6">
           {[
             { icon: <BookOpen className="w-3.5 h-3.5" />, label: "استناد به مواد قانونی" },
