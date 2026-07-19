@@ -254,6 +254,59 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_orders: {
+        Row: {
+          amount_toman: number
+          authority: string | null
+          created_at: string
+          gateway: string
+          id: string
+          meta: Json
+          package_id: string
+          ref_id: string | null
+          status: string
+          tokens: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_toman: number
+          authority?: string | null
+          created_at?: string
+          gateway?: string
+          id?: string
+          meta?: Json
+          package_id: string
+          ref_id?: string | null
+          status?: string
+          tokens: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_toman?: number
+          authority?: string | null
+          created_at?: string
+          gateway?: string
+          id?: string
+          meta?: Json
+          package_id?: string
+          ref_id?: string | null
+          status?: string
+          tokens?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_orders_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "token_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -272,6 +325,108 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      token_packages: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          price_toman: number
+          slug: string
+          sort_order: number
+          title_fa: string
+          tokens: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price_toman: number
+          slug: string
+          sort_order?: number
+          title_fa: string
+          tokens: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price_toman?: number
+          slug?: string
+          sort_order?: number
+          title_fa?: string
+          tokens?: number
+        }
+        Relationships: []
+      }
+      usage_ledger: {
+        Row: {
+          completion_tokens: number
+          created_at: string
+          id: string
+          kind: string
+          meta: Json
+          mode: string
+          prompt_tokens: number
+          total_tokens: number
+          user_id: string
+          workspace_slug: string | null
+        }
+        Insert: {
+          completion_tokens?: number
+          created_at?: string
+          id?: string
+          kind: string
+          meta?: Json
+          mode: string
+          prompt_tokens?: number
+          total_tokens?: number
+          user_id: string
+          workspace_slug?: string | null
+        }
+        Update: {
+          completion_tokens?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          meta?: Json
+          mode?: string
+          prompt_tokens?: number
+          total_tokens?: number
+          user_id?: string
+          workspace_slug?: string | null
+        }
+        Relationships: []
+      }
+      user_credits: {
+        Row: {
+          balance_tokens: number
+          created_at: string
+          free_analyses_today: number
+          last_free_reset: string
+          total_purchased_tokens: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance_tokens?: number
+          created_at?: string
+          free_analyses_today?: number
+          last_free_reset?: string
+          total_purchased_tokens?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance_tokens?: number
+          created_at?: string
+          free_analyses_today?: number
+          last_free_reset?: string
+          total_purchased_tokens?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -333,6 +488,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_can_use: { Args: { _kind: string; _uid: string }; Returns: Json }
+      credit_tokens: {
+        Args: { _order_id: string; _tokens: number; _uid: string }
+        Returns: Json
+      }
+      ensure_user_credits: {
+        Args: { _uid: string }
+        Returns: {
+          balance_tokens: number
+          created_at: string
+          free_analyses_today: number
+          last_free_reset: string
+          total_purchased_tokens: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "user_credits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_related_documents: {
         Args: {
           _document_ids: string[]
@@ -379,6 +557,18 @@ export type Database = {
           similarity: number
           source_type: string
         }[]
+      }
+      record_ai_usage: {
+        Args: {
+          _completion_tokens: number
+          _kind: string
+          _meta: Json
+          _mode: string
+          _prompt_tokens: number
+          _uid: string
+          _workspace_slug: string
+        }
+        Returns: Json
       }
     }
     Enums: {
