@@ -555,6 +555,32 @@ serve(async (req) => {
       auto: roleInfo.auto,
     };
 
+    // ── Record usage & consume credits ──
+    const promptTokens = data.usage?.prompt_tokens ?? 0;
+    const completionTokens = data.usage?.completion_tokens ?? 0;
+    let creditsAfter: any = null;
+    try {
+      const { data: usageRes } = await sbAdmin.rpc("record_ai_usage", {
+        _uid: userId,
+        _kind: detailed ? "detailed" : "standard",
+        _mode: usageMode,
+        _prompt_tokens: promptTokens,
+        _completion_tokens: completionTokens,
+        _workspace_slug: workspace_slug || null,
+        _meta: { detailed: !!detailed, model: detailed ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash" },
+      });
+      creditsAfter = usageRes;
+    } catch (e) {
+      console.warn("record_ai_usage failed", e);
+    }
+    parsed.usage = {
+      mode: usageMode,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      total_tokens: promptTokens + completionTokens,
+      new_balance: creditsAfter?.new_balance ?? null,
+    };
+
     await logAudit(sbAdmin, {
       ...auditBase,
       response_summary: (parsed.summary || "").slice(0, 500),
