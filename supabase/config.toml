@@ -1,10 +1,10 @@
 project_id = "bwootzhnhbtfsgiohnya"
 
 [functions.legal-ai]
-verify_jwt = true
+verify_jwt = false
 
 [functions.legal-ingest]
-verify_jwt = true
+verify_jwt = false
 
 [functions.legal-search]
-verify_jwt = true
+verify_jwt = false
