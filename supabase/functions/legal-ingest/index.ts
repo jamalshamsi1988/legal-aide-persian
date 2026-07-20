@@ -68,6 +68,36 @@ async function embedBatch(inputs: string[], apiKey: string): Promise<number[][]>
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
+  // ── AuthN + Admin check ──
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.toLowerCase().startsWith("bearer ")) {
+    return new Response(
+      JSON.stringify({ error: "برای افزودن سند به پایگاه دانش باید وارد حساب مدیر شوید." }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  const jwt = authHeader.replace(/^Bearer\s+/i, "");
+  const { data: userData, error: userErr } = await supabase.auth.getUser(jwt);
+  if (userErr || !userData?.user) {
+    return new Response(
+      JSON.stringify({ error: "نشست شما منقضی شده است." }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  const { data: isAdmin } = await supabase.rpc("has_role", {
+    _user_id: userData.user.id, _role: "admin",
+  });
+  if (!isAdmin) {
+    return new Response(
+      JSON.stringify({ error: "این عملیات فقط برای مدیر مجاز است." }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   try {
     const { workspace_slug, title, source_type, published_date, raw_text } = await req.json();
 
@@ -79,15 +109,7 @@ serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
-    if (!LOVABLE_API_KEY || !SUPABASE_URL || !SERVICE_KEY || !ANON_KEY) {
-      throw new Error("Server misconfigured");
-    }
-
-    // Public access per TSD phase 1 — no auth required for corpus ingestion
-    // In a later phase, admin auth will be added back.
+    if (!LOVABLE_API_KEY) throw new Error("Server misconfigured");
 
     // Look up workspace
     const { data: ws, error: wsErr } = await supabase
@@ -101,6 +123,7 @@ serve(async (req) => {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // Create document
     const { data: doc, error: docErr } = await supabase
