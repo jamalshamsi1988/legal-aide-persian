@@ -295,6 +295,28 @@ serve(async (req) => {
     detailed: false,
   };
 
+  // ── AuthN: require a valid JWT ──
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.toLowerCase().startsWith("bearer ")) {
+    return new Response(
+      JSON.stringify({ error: "برای استفاده از تحلیل باید ابتدا وارد حساب کاربری شوید." }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  const jwt = authHeader.replace(/^Bearer\s+/i, "");
+  const { data: userData, error: userErr } = await sbAdmin.auth.getUser(jwt);
+  if (userErr || !userData?.user) {
+    return new Response(
+      JSON.stringify({ error: "نشست شما منقضی شده است. لطفاً دوباره وارد شوید." }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+  const userId = userData.user.id;
+  auditBase.user_id = userId;
+
+  // Will be set after body parse; needed for post-AI ledger.
+  let usageMode: "free" | "paid" | "blocked" = "blocked";
+
   try {
     const { question, files, detailed, workspace_slug, user_role: providedRole } = await req.json();
     auditBase = {
@@ -325,6 +347,39 @@ serve(async (req) => {
       });
       return new Response(
         JSON.stringify({ error: "سرویس AI در حال حاضر در دسترس نیست." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // ── Quota / Credit gate ──
+    const kind = detailed ? "detailed" : "standard";
+    const { data: canUse, error: canErr } = await sbAdmin.rpc("check_can_use", {
+      _uid: userId, _kind: kind,
+    });
+    if (canErr) console.warn("check_can_use error", canErr);
+    usageMode = (canUse?.mode as any) || "blocked";
+    if (!canUse?.allowed) {
+      const reason = canUse?.reason || "insufficient";
+      const msg =
+        reason === "insufficient_balance_detailed"
+          ? "برای تحلیل ویژه (Gemini Pro) به موجودی توکن کافی نیاز دارید. لطفاً بسته توکن تهیه کنید."
+          : reason === "free_exhausted_no_balance"
+          ? "سهمیه رایگان روزانه شما (۳ تحلیل) به پایان رسیده است. برای ادامه، بسته توکن تهیه کنید."
+          : "امکان انجام این درخواست وجود ندارد. موجودی/سهمیه کافی نیست.";
+      await logAudit(sbAdmin, {
+        ...auditBase, status: "quota_blocked",
+        error_message: reason, duration_ms: Date.now() - startedAt,
+      });
+      return new Response(
+        JSON.stringify({
+          error: msg,
+          quota: {
+            allowed: false,
+            reason,
+            balance: canUse?.balance ?? 0,
+            free_left: canUse?.free_left ?? 0,
+          },
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
